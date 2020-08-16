@@ -5,7 +5,7 @@ param(
 
     [Parameter(Mandatory = $True)]
     [string]
-    $resourceGroupName,
+    $name,
 
     [Parameter(Mandatory = $False)]
     [switch]
@@ -45,7 +45,7 @@ $KeyVaultToken = $content.access_token
 $tries = 1
 while ($tries -le 10) { 
     try {
-        $secretJson = (Invoke-WebRequest -Uri https://swarmvault-$resourceGroupName.vault.azure.net/secrets/JoinCommand?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
+        $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommand?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
         Write-Host "join swarm"
         Invoke-Expression $secretJson.value 
     
@@ -72,7 +72,7 @@ $tries = 1
 while ($tries -le 10) { 
     try {
         Write-Host "download SSH key"
-        $secretJson = (Invoke-WebRequest -Uri https://swarmvault-$resourceGroupName.vault.azure.net/secrets/sshPubKey?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
+        $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/sshPubKey?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
         
         $secretJson.value | Out-File 'c:\ProgramData\ssh\administrators_authorized_keys' -Encoding utf8
 
