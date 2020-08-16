@@ -1,0 +1,93 @@
+version: '3.7'
+
+services:
+  traefik:
+    image: traefik:2.2-windowsservercore-1809
+    command:
+#      - --log.level=DEBUG
+      - --api.dashboard=true
+      - --providers.docker.swarmMode=true
+      - --providers.docker.network=traefik-public
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.endpoint=npipe:////./pipe/docker_engine
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.myresolver.acme.tlschallenge=true
+      - --certificatesresolvers.myresolver.acme.email=$email
+      - --certificatesresolvers.myresolver.acme.storage=c:/le/acme.json
+      - --serversTransport.insecureSkipVerify=true
+    volumes:
+      - source: 'C:/iac/le'
+        target: 'C:/le'
+        type: bind
+      - source: '\\.\pipe\docker_engine'
+        target: '\\.\pipe\docker_engine'
+        type: npipe
+    ports:
+      - 443:443
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=false
+        - traefik.http.routers.api.entrypoints=websecure
+        - traefik.http.routers.api.tls.certresolver=myresolver
+        - traefik.http.routers.api.rule=Host(``$externaldns``) && (PathPrefix(``/api``) || PathPrefix(``/dashboard``))
+        - traefik.http.routers.api.service=api@internal
+        - traefik.http.services.api.loadBalancer.server.port=8080
+    networks:
+      - traefik-public
+
+  agent:
+    image: portainer/agent:windows1809-amd64
+    environment:
+      AGENT_CLUSTER_ADDR: tasks.agent
+    volumes:
+      - source: '\\.\pipe\docker_engine'
+        target: '\\.\pipe\docker_engine'
+        type: npipe
+      - source: 'C:/ProgramData/docker/volumes'
+        target: 'C:/ProgramData/docker/volumes'
+        type: bind
+    networks:
+      - agent-network
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.platform.os == windows
+
+  portainer:
+    image: portainer/portainer:windows1809-amd64
+    command: -H tcp://tasks.agent:9001 --tlsskipverify
+    volumes:
+      - portainer-data:c:/data
+    networks:
+      - agent-network
+      - traefik-public
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.portainer.rule=Host(``$externaldns``) && PathPrefix(``/portainer/``)
+        - traefik.http.routers.portainer.entrypoints=websecure
+        - traefik.http.routers.portainer.tls.certresolver=myresolver
+        - traefik.http.routers.portainer.service=portainer@docker, limit@docker
+        - traefik.http.services.portainer.loadBalancer.server.scheme=http
+        - traefik.http.services.portainer.loadBalancer.server.port=9000
+        - traefik.http.middlewares.portainer.stripprefix.prefixes=/portainer
+        - traefik.http.middlewares.limit.buffering.maxRequestBodyBytes=500000000
+        - traefik.http.routers.portainer.middlewares=portainer@docker
+    depends_on:
+      - traefik
+
+networks:
+  agent-network:
+    attachable: true
+  traefik-public:
+    external: true
+
+volumes:
+  portainer-data:
