@@ -15,15 +15,15 @@ param(
     [string]
     $additionalScript = "",
 
-    [Parameter(Mandatory=$True)]
+    [Parameter(Mandatory = $True)]
     [string]
     $externaldns,
    
-    [Parameter(Mandatory=$True)]
+    [Parameter(Mandatory = $True)]
     [string]
     $email,
 
-    [Parameter(Mandatory=$False)]
+    [Parameter(Mandatory = $False)]
     [switch]
     $isLeader
 )
@@ -36,7 +36,7 @@ New-Item -Path c:\iac\le\acme.json | Out-Null
 New-NetFirewallRule -DisplayName "Allow Swarm TCP" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 2377, 7946 | Out-Null
 New-NetFirewallRule -DisplayName "Allow Swarm UDP" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 4789, 7946 | Out-Null
 
-if (isLeader) {
+if ($isLeader) {
     Invoke-Expression "docker swarm init --advertise-addr 10.0.3.4 --default-addr-pool 10.10.0.0/16"
 
     # Store joinCommand in Azure Key Vault
@@ -55,7 +55,7 @@ if (isLeader) {
             }
             Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommand?api-version=2016-10-01 -Method PUT -Headers @{Authorization = "Bearer $KeyVaultToken" } -Body (ConvertTo-Json $Body) -ContentType "application/json" -UseBasicParsing
             
-            $joinCommandMgr = "docker swarm join --token $token 10.0.3.4:2377"
+            $joinCommandMgr = "docker swarm join --token $tokenMgr 10.0.3.4:2377"
             $Body = @{
                 value = $joinCommandMgr
             }
@@ -76,7 +76,8 @@ if (isLeader) {
             Start-Sleep -Seconds 30
         }
     }
-} else {
+}
+else {
     $tries = 1
     while ($tries -le 10) { 
         try {
