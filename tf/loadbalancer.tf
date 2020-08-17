@@ -41,6 +41,8 @@ resource "azurerm_lb_probe" "https" {
   loadbalancer_id     = azurerm_lb.main.id
   name                = "https"
   port                = 443
+  interval_in_seconds = 15
+  number_of_probes    = 4
 }
 
 resource "azurerm_lb_rule" "https" {
@@ -53,4 +55,5 @@ resource "azurerm_lb_rule" "https" {
   frontend_ip_configuration_name = "publicIPAddress"
   backend_address_pool_id        = azurerm_lb_backend_address_pool.main.id
   probe_id                       = azurerm_lb_probe.https.id
+  idle_timeout_in_minutes        = 30
 }
