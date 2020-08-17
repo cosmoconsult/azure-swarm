@@ -74,12 +74,12 @@ services:
         - traefik.http.routers.portainer.rule=Host(``$externaldns``) && PathPrefix(``/portainer/``)
         - traefik.http.routers.portainer.entrypoints=websecure
         - traefik.http.routers.portainer.tls.certresolver=myresolver
-        - traefik.http.routers.portainer.service=portainer@docker, limit@docker
+        - traefik.http.routers.portainer.service=portainer@docker
         - traefik.http.services.portainer.loadBalancer.server.scheme=http
         - traefik.http.services.portainer.loadBalancer.server.port=9000
         - traefik.http.middlewares.portainer.stripprefix.prefixes=/portainer
         - traefik.http.middlewares.limit.buffering.maxRequestBodyBytes=500000000
-        - traefik.http.routers.portainer.middlewares=portainer@docker
+        - traefik.http.routers.portainer.middlewares=portainer@docker, limit@docker
     depends_on:
       - traefik
 
