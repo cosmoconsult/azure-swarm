@@ -25,11 +25,11 @@ param(
 
     [Parameter(Mandatory=$False)]
     [switch]
-    $isLeader
+    $isFirstMgr
 )
 
 if (-not $restart) {
-    if ($isLeader) {
+    if ($isFirstMgr) {
         # Deploy Portainer / Traefik
         Invoke-Expression "docker network create --driver=overlay traefik-public" | Out-Null
         Start-Sleep -Seconds 10

@@ -25,7 +25,7 @@ param(
 
     [Parameter(Mandatory = $False)]
     [switch]
-    $isLeader
+    $isFirstMgr
 )
 
 New-Item -Path c:\iac -ItemType Directory | Out-Null	
@@ -36,7 +36,7 @@ New-Item -Path c:\iac\le\acme.json | Out-Null
 New-NetFirewallRule -DisplayName "Allow Swarm TCP" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 2377, 7946 | Out-Null
 New-NetFirewallRule -DisplayName "Allow Swarm UDP" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 4789, 7946 | Out-Null
 
-if ($isLeader) {
+if ($isFirstMgr) {
     Invoke-Expression "docker swarm init --advertise-addr 10.0.3.4 --default-addr-pool 10.10.0.0/16"
 
     # Store joinCommand in Azure Key Vault
@@ -106,12 +106,12 @@ else {
 # Setup tasks
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mgrConfig.ps1" -OutFile c:\iac\mgrConfig.ps1
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\iac\mgrConfig.ps1' -name $name -externaldns '$externaldns' -email '$email' -additionalScript '$additionalScript' -branch '$branch' -isLeader:`$$isLeader`" 2>&1 >> c:\iac\log.txt"
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\iac\mgrConfig.ps1' -name $name -externaldns '$externaldns' -email '$email' -additionalScript '$additionalScript' -branch '$branch' -isFirstMgr:`$$isFirstMgr`" 2>&1 >> c:\iac\log.txt"
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddSeconds(10)
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "MgrConfig" -Description "This task should configure the manager"
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\iac\mgrConfig.ps1' -name $name -externaldns '$externaldns' -email '$email' -additionalScript '$additionalScript' -branch '$branch' -isLeader:`$$isLeader -restart`" 2>&1 >> c:\iac\log.txt"
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\iac\mgrConfig.ps1' -name $name -externaldns '$externaldns' -email '$email' -additionalScript '$additionalScript' -branch '$branch' -isFirstMgr:`$$isFirstMgr -restart`" 2>&1 >> c:\iac\log.txt"
 $trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "MgrConfigReboot" -Description "This task should configure the manager after a reboot"
