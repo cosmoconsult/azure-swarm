@@ -1,4 +1,4 @@
-resource "azurerm_windows_virtual_machine_scale_set" "workers" {
+resource "azurerm_windows_virtual_machine_scale_set" "worker" {
   name                 = "${var.name}-worker-vmss"
   resource_group_name  = azurerm_resource_group.main.name
   location             = azurerm_resource_group.main.location
@@ -41,4 +41,23 @@ resource "azurerm_subnet" "worker" {
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = ["10.0.4.0/22"]
+}
+
+resource "azurerm_virtual_machine_scale_set_extension" "initWorker" {
+  name                         = "example"
+  virtual_machine_scale_set_id = azurerm_windows_virtual_machine_scale_set.worker.id
+  publisher                    = "Microsoft.Compute"
+  type                         = "CustomScriptExtension"
+  type_handler_version         = "1.10"
+  auto_upgrade_minor_version   = true
+
+  settings = jsonencode({
+    "fileUris" = [
+      "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/${var.branch}/scripts/workerSetupTasks.ps1"
+    ]
+  })
+
+  protected_settings = jsonencode({
+    "commandToExecute" : "powershell -ExecutionPolicy Unrestricted -File workerSetupTasks.ps1 -images \"${var.images}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptWorker}\" -name \"${var.name}\""
+  })
 }
