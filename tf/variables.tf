@@ -21,10 +21,10 @@ variable "workerVmssSettings" {
 variable "managerVmSettings" {
   description = "The Azure VM settings for the managers"
   default = {
-    size             = "Standard_D2s_v3"
-    additionalNumber = 2
-    sku              = "2019-datacenter-core-with-containers"
-    version          = "17763.1158.2004131759"
+    size     = "Standard_D2s_v3"
+    useThree = true
+    sku      = "2019-datacenter-core-with-containers"
+    version  = "17763.1158.2004131759"
   }
 }
 

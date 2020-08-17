@@ -5,30 +5,44 @@ resource "azurerm_subnet" "mgr" {
   address_prefixes     = ["10.0.3.0/24"]
 }
 
-resource "azurerm_network_interface" "firstmgr" {
-  name                = "${var.name}-firstmgr-nic"
+resource "azurerm_network_interface" "mgr1" {
+  name                = "${var.name}-mgr1-nic"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
 
   ip_configuration {
-    name                          = "static-firstmgr"
+    name                          = "static-mgr1"
     subnet_id                     = azurerm_subnet.mgr.id
     private_ip_address_allocation = "Static"
     private_ip_address            = "10.0.3.4"
   }
 }
 
-resource "azurerm_network_interface" "mgr" {
-  count               = var.managerVmSettings.additionalNumber
-  name                = "${var.name}-mgr${count.index}-nic"
+resource "azurerm_network_interface" "mgr2" {
+  count               = var.managerVmSettings.useThree ? 1 : 0
+  name                = "${var.name}-mgr2-nic"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 
   ip_configuration {
-    name                          = "dynamic-additional-mgr"
+    name                          = "static-mgr2"
     subnet_id                     = azurerm_subnet.mgr.id
     private_ip_address_allocation = "Static"
-    private_ip_address            = "10.0.3.${count.index + 6}"
+    private_ip_address            = "10.0.3.6"
+  }
+}
+
+resource "azurerm_network_interface" "mgr3" {
+  count               = var.managerVmSettings.useThree ? 1 : 0
+  name                = "${var.name}-mgr3-nic"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+
+  ip_configuration {
+    name                          = "static-mgr3"
+    subnet_id                     = azurerm_subnet.mgr.id
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.0.3.7"
   }
 }
 
@@ -36,8 +50,8 @@ resource "azurerm_availability_set" "mgr-avset" {
   name                         = "${var.name}-mgr-avset"
   location                     = azurerm_resource_group.main.location
   resource_group_name          = azurerm_resource_group.main.name
-  platform_fault_domain_count  = var.managerVmSettings.additionalNumber + 1
-  platform_update_domain_count = var.managerVmSettings.additionalNumber + 1
+  platform_fault_domain_count  = var.managerVmSettings.useThree ? 3 : 1
+  platform_update_domain_count = var.managerVmSettings.useThree ? 3 : 1
   managed                      = true
 }
 
@@ -61,20 +75,26 @@ resource "azurerm_network_security_rule" "https" {
   destination_address_prefix  = "*"
 }
 
-resource "azurerm_network_interface_security_group_association" "mgr" {
-  count                     = var.managerVmSettings.additionalNumber
-  network_interface_id      = element(azurerm_network_interface.mgr.*.id, count.index)
+resource "azurerm_network_interface_security_group_association" "mgr3" {
+  count                     = var.managerVmSettings.useThree ? 1 : 0
+  network_interface_id      = azurerm_network_interface.mgr3.0.id
   network_security_group_id = azurerm_network_security_group.mgr.id
 }
 
-resource "azurerm_network_interface_security_group_association" "firstmgr" {
-  network_interface_id      = azurerm_network_interface.firstmgr.id
+resource "azurerm_network_interface_security_group_association" "mgr2" {
+  count                     = var.managerVmSettings.useThree ? 1 : 0
+  network_interface_id      = azurerm_network_interface.mgr2.0.id
   network_security_group_id = azurerm_network_security_group.mgr.id
 }
 
-resource "azurerm_windows_virtual_machine" "firstmgr" {
-  name                = "${var.name}-firstmgr-vm"
-  computer_name       = "firstmgr"
+resource "azurerm_network_interface_security_group_association" "mgr1" {
+  network_interface_id      = azurerm_network_interface.mgr1.id
+  network_security_group_id = azurerm_network_security_group.mgr.id
+}
+
+resource "azurerm_windows_virtual_machine" "mgr1" {
+  name                = "${var.name}-mgr1-vm"
+  computer_name       = "mgr1"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   size                = var.managerVmSettings.size
@@ -82,7 +102,7 @@ resource "azurerm_windows_virtual_machine" "firstmgr" {
   admin_username      = var.adminUsername
   admin_password      = random_password.password.result
   network_interface_ids = [
-    azurerm_network_interface.firstmgr.id,
+    azurerm_network_interface.mgr1.id,
   ]
 
   source_image_reference {
@@ -102,9 +122,9 @@ resource "azurerm_windows_virtual_machine" "firstmgr" {
   }
 }
 
-resource "azurerm_virtual_machine_extension" "initFirstmgr" {
-  name                       = "initFirstmgr"
-  virtual_machine_id         = azurerm_windows_virtual_machine.firstmgr.id
+resource "azurerm_virtual_machine_extension" "initMgr1" {
+  name                       = "initMgr1"
+  virtual_machine_id         = azurerm_windows_virtual_machine.mgr1.id
   publisher                  = "Microsoft.Compute"
   type                       = "CustomScriptExtension"
   type_handler_version       = "1.10"
@@ -113,26 +133,22 @@ resource "azurerm_virtual_machine_extension" "initFirstmgr" {
     azurerm_key_vault.main
   ]
 
-  settings = <<SETTINGS
-    {
-      "fileUris": [
-        "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/${var.branch}/scripts/mgrInitSwarmAndSetupTasks.ps1"
-      ]
-    }
-  SETTINGS
+  settings = jsonencode({
+    "fileUris" = [
+      "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/${var.branch}/scripts/mgrInitSwarmAndSetupTasks.ps1"
+    ]
+  })
 
-  protected_settings = <<PROTECTED_SETTINGS
-    {
-      "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${var.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptJumpbox}\" -name \"${var.name}\" -isFirstmgr"
-    }
-  PROTECTED_SETTINGS
+  protected_settings = jsonencode({
+    "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${var.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptJumpbox}\" -name \"${var.name}\" -isFirstmgr"
+  })
 
 }
 
-resource "azurerm_windows_virtual_machine" "mgr" {
-  count               = var.managerVmSettings.additionalNumber
-  name                = "${var.name}-mgr${count.index}-vm"
-  computer_name       = "mgr${count.index}"
+resource "azurerm_windows_virtual_machine" "mgr2" {
+  count               = var.managerVmSettings.useThree ? 1 : 0
+  name                = "${var.name}-mgr2-vm"
+  computer_name       = "mgr2"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   size                = var.managerVmSettings.size
@@ -140,7 +156,10 @@ resource "azurerm_windows_virtual_machine" "mgr" {
   admin_username      = var.adminUsername
   admin_password      = random_password.password.result
   network_interface_ids = [
-    element(azurerm_network_interface.mgr.*.id, count.index)
+    azurerm_network_interface.mgr2.0.id
+  ]
+  depends_on = [
+    azurerm_virtual_machine_extension.initMgr1
   ]
 
   source_image_reference {
@@ -160,38 +179,86 @@ resource "azurerm_windows_virtual_machine" "mgr" {
   }
 }
 
-resource "azurerm_virtual_machine_extension" "initMgr" {
-  count                      = var.managerVmSettings.additionalNumber
-  name                       = "initMgr"
-  virtual_machine_id         = element(azurerm_windows_virtual_machine.mgr.*.id, count.index)
+resource "azurerm_windows_virtual_machine" "mgr3" {
+  count               = var.managerVmSettings.useThree ? 1 : 0
+  name                = "${var.name}-mgr3-vm"
+  computer_name       = "mgr3"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  size                = var.managerVmSettings.size
+  availability_set_id = azurerm_availability_set.mgr-avset.id
+  admin_username      = var.adminUsername
+  admin_password      = random_password.password.result
+  network_interface_ids = [
+    azurerm_network_interface.mgr3.0.id
+  ]
+  depends_on = [
+    azurerm_virtual_machine_extension.initMgr2
+  ]
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = var.managerVmSettings.sku
+    version   = var.managerVmSettings.version
+  }
+
+  os_disk {
+    storage_account_type = "Premium_LRS"
+    caching              = "ReadWrite"
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+}
+
+resource "azurerm_virtual_machine_extension" "initMgr2" {
+  count                      = var.managerVmSettings.useThree ? 1 : 0
+  name                       = "initMgr2"
+  virtual_machine_id         = azurerm_windows_virtual_machine.mgr2.0.id
   publisher                  = "Microsoft.Compute"
   type                       = "CustomScriptExtension"
   type_handler_version       = "1.10"
   auto_upgrade_minor_version = true
-  depends_on = [
-    azurerm_virtual_machine_extension.initFirstmgr
-  ]
 
-  settings = <<SETTINGS
-    {
-      "fileUris": [
-        "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/${var.branch}/scripts/mgrInitSwarmAndSetupTasks.ps1"
-      ]
-    }
-  SETTINGS
+  settings = jsonencode({
+    "fileUris" = [
+      "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/${var.branch}/scripts/mgrInitSwarmAndSetupTasks.ps1"
+    ]
+  })
 
-  protected_settings = <<PROTECTED_SETTINGS
-    {
-      "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${var.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptJumpbox}\" -name \"${var.name}\""
-    }
-  PROTECTED_SETTINGS
+  protected_settings = jsonencode({
+    "commandToExecute" : "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${var.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptMgr}\" -name \"${var.name}\""
+  })
 
 }
 
-resource "azurerm_key_vault_access_policy" "firstMgr" {
+resource "azurerm_virtual_machine_extension" "initMgr3" {
+  count                      = var.managerVmSettings.useThree ? 1 : 0
+  name                       = "initMgr3"
+  virtual_machine_id         = azurerm_windows_virtual_machine.mgr3.0.id
+  publisher                  = "Microsoft.Compute"
+  type                       = "CustomScriptExtension"
+  type_handler_version       = "1.10"
+  auto_upgrade_minor_version = true
+
+  settings = jsonencode({
+    "fileUris" = [
+      "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/${var.branch}/scripts/mgrInitSwarmAndSetupTasks.ps1"
+    ]
+  })
+
+  protected_settings = jsonencode({
+    "commandToExecute" : "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${var.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptMgr}\" -name \"${var.name}\""
+  })
+
+}
+
+resource "azurerm_key_vault_access_policy" "mgr1" {
   key_vault_id = azurerm_key_vault.main.id
   tenant_id    = data.azurerm_client_config.current.tenant_id
-  object_id    = azurerm_windows_virtual_machine.firstMgr.identity.0.principal_id
+  object_id    = azurerm_windows_virtual_machine.mgr1.identity.0.principal_id
 
   key_permissions = [
   ]
@@ -207,11 +274,28 @@ resource "azurerm_key_vault_access_policy" "firstMgr" {
   ]
 }
 
-resource "azurerm_key_vault_access_policy" "mgr" {
-  count        = var.managerVmSettings.additionalNumber
+resource "azurerm_key_vault_access_policy" "mgr2" {
+  count        = var.managerVmSettings.useThree ? 1 : 0
   key_vault_id = azurerm_key_vault.main.id
   tenant_id    = data.azurerm_client_config.current.tenant_id
-  object_id    = element(azurerm_windows_virtual_machine.mgr.*.identity.0.principal_id, count.index)
+  object_id    = azurerm_windows_virtual_machine.mgr2.0.identity.0.principal_id
+
+  key_permissions = [
+  ]
+
+  secret_permissions = [
+    "Get"
+  ]
+
+  certificate_permissions = [
+  ]
+}
+
+resource "azurerm_key_vault_access_policy" "mgr3" {
+  count        = var.managerVmSettings.useThree ? 1 : 0
+  key_vault_id = azurerm_key_vault.main.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_windows_virtual_machine.mgr3.0.identity.0.principal_id
 
   key_permissions = [
   ]

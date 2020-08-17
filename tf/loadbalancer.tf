@@ -23,16 +23,23 @@ resource "azurerm_lb_backend_address_pool" "main" {
   name                = "${var.name}-lb-BackEndAddressPool"
 }
 
-resource "azurerm_network_interface_backend_address_pool_association" "firstMgr" {
-  network_interface_id    = azurerm_network_interface.firstMgr.id
-  ip_configuration_name   = "static-firstMgr"
+resource "azurerm_network_interface_backend_address_pool_association" "mgr1" {
+  network_interface_id    = azurerm_network_interface.mgr1.id
+  ip_configuration_name   = "static-mgr1"
   backend_address_pool_id = azurerm_lb_backend_address_pool.main.id
 }
 
-resource "azurerm_network_interface_backend_address_pool_association" "mgr" {
-  count                   = var.managerVmSettings.additionalNumber
-  network_interface_id    = element(azurerm_network_interface.mgr.*.id, count.index)
-  ip_configuration_name   = "dynamic-additional-mgr"
+resource "azurerm_network_interface_backend_address_pool_association" "mgr2" {
+  count                   = var.managerVmSettings.useThree ? 1 : 0
+  network_interface_id    = azurerm_network_interface.mgr2.0.id
+  ip_configuration_name   = "static-mgr2"
+  backend_address_pool_id = azurerm_lb_backend_address_pool.main.id
+}
+
+resource "azurerm_network_interface_backend_address_pool_association" "mgr3" {
+  count                   = var.managerVmSettings.useThree ? 1 : 0
+  network_interface_id    = azurerm_network_interface.mgr3.0.id
+  ip_configuration_name   = "static-mgr3"
   backend_address_pool_id = azurerm_lb_backend_address_pool.main.id
 }
 
