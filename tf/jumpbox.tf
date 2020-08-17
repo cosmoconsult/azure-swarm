@@ -1,23 +1,23 @@
 resource "azurerm_public_ip" "jumpbox" {
- name                         = "${var.name}-jumpbox-publicip"
- location                     = azurerm_resource_group.main.location
- resource_group_name          = azurerm_resource_group.main.name
- allocation_method            = "Static"
- domain_name_label            = "${var.name}-ssh"
+  name                = "${var.name}-jumpbox-publicip"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  allocation_method   = "Static"
+  domain_name_label   = "${var.name}-ssh"
 }
 
 resource "azurerm_network_interface" "jumpbox" {
- name                = "${var.name}-jumpbox-nic"
- location            = azurerm_resource_group.main.location
- resource_group_name = azurerm_resource_group.main.name
+  name                = "${var.name}-jumpbox-nic"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
 
- ip_configuration {
-   name                          = "IPConfiguration"
-   subnet_id                     = azurerm_subnet.mgr.id
-   private_ip_address_allocation = "Static"
-   private_ip_address            = "10.0.3.5"
-   public_ip_address_id          = azurerm_public_ip.jumpbox.id
- }
+  ip_configuration {
+    name                          = "IPConfiguration"
+    subnet_id                     = azurerm_subnet.mgr.id
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.0.3.5"
+    public_ip_address_id          = azurerm_public_ip.jumpbox.id
+  }
 }
 
 resource "azurerm_network_security_group" "jumpbox" {
@@ -60,20 +60,20 @@ resource "azurerm_network_interface_security_group_association" "jumpbox" {
 }
 
 resource "azurerm_windows_virtual_machine" "jumpbox" {
- name                  = "${var.name}-jumpbox-vm"
- computer_name         = "jumpbox"
- location              = azurerm_resource_group.main.location
- resource_group_name   = azurerm_resource_group.main.name
- network_interface_ids = [azurerm_network_interface.jumpbox.id]
- size                  = var.jumpboxVmSettings.size
- admin_username        = var.adminUsername
- admin_password        = random_password.password.result
- 
- depends_on            = [ 
-  azurerm_key_vault_secret.sshPubKey
- ]
+  name                  = "${var.name}-jumpbox-vm"
+  computer_name         = "jumpbox"
+  location              = azurerm_resource_group.main.location
+  resource_group_name   = azurerm_resource_group.main.name
+  network_interface_ids = [azurerm_network_interface.jumpbox.id]
+  size                  = var.jumpboxVmSettings.size
+  admin_username        = var.adminUsername
+  admin_password        = random_password.password.result
 
- source_image_reference {
+  depends_on = [
+    azurerm_key_vault_secret.sshPubKey
+  ]
+
+  source_image_reference {
     publisher = "MicrosoftWindowsServer"
     offer     = "WindowsServer"
     sku       = var.jumpboxVmSettings.sku
@@ -116,8 +116,8 @@ resource "azurerm_virtual_machine_extension" "initJumpBox" {
 
 resource "azurerm_key_vault_access_policy" "jumpbox" {
   key_vault_id = azurerm_key_vault.main.id
-  tenant_id = data.azurerm_client_config.current.tenant_id
-  object_id = azurerm_windows_virtual_machine.jumpbox.identity.0.principal_id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_windows_virtual_machine.jumpbox.identity.0.principal_id
 
   key_permissions = [
   ]
