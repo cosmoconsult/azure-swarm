@@ -17,7 +17,7 @@ param(
 )
 
 New-Item -Path c:\iac -ItemType Directory | Out-Null
-Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/tfenster/BC-Swarm/$branch/Swarm/workerConfig.ps1" -OutFile c:\iac\workerConfig.ps1
+Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/workerConfig.ps1" -OutFile c:\iac\workerConfig.ps1
 
 & 'c:\iac\workerConfig.ps1' -name $name -images '$images' -additionalScript '$additionalScript' -branch '$branch'`" 2>&1 >> c:\iac\log.txt
 

@@ -26,7 +26,7 @@ if (-not $restart) {
     choco feature enable -n allowGlobalConfirmation
     choco install --no-progress --limit-output vim
     choco install --no-progress --limit-output openssh -params '"/SSHServerFeature"'
-    Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/tfenster/BC-Swarm/$branch/Swarm/sshd_config" -OutFile C:\ProgramData\ssh\sshd_config
+    Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/sshd_config_wpwd" -OutFile C:\ProgramData\ssh\sshd_config
     Restart-Service sshd
 
     # Swarm setup
