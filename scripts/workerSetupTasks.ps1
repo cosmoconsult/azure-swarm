@@ -26,6 +26,7 @@ param(
 
 New-Item -Path c:\iac -ItemType Directory | Out-Null
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/workerConfig.ps1" -OutFile c:\iac\workerConfig.ps1
+Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\iac\mountAzFileShare.ps1
 
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\iac\workerConfig.ps1' -name $name -images '$images' -additionalScript '$additionalScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey'`" 2>&1 >> c:\iac\log.txt"
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddSeconds(10)

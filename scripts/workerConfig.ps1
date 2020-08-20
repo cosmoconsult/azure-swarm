@@ -106,7 +106,7 @@ while ($tries -le 10) {
     }
 }
 
-New-PSDrive -Name S -PSProvider FileSystem -Root "\\$storageAccountName.file.core.windows.net\share" -Scope Global -Persist -Credential (New-Object System.Management.Automation.PSCredential ("Azure\$storageAccountName", (ConvertTo-SecureString -AsPlainText -Force "$storageAccountKey") ))
+. c:\iac\mountAzFileShare.ps1 -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -driveLetter "S"
 
 if (-not $restart) {
     # Handle additional script
