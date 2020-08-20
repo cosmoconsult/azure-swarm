@@ -17,7 +17,15 @@ param(
 
     [Parameter(Mandatory = $False)]
     [string]
-    $branch = "master"
+    $branch = "master",
+
+    [Parameter(Mandatory = $True)]
+    [string]
+    $storageAccountName,
+
+    [Parameter(Mandatory = $True)]
+    [string]
+    $storageAccountKey
 )
 
 if (-not $restart) {
@@ -97,6 +105,8 @@ while ($tries -le 10) {
         Start-Sleep -Seconds 30
     }
 }
+
+New-PSDrive -Name S -PSProvider FileSystem -Root "\\$storageAccountName.file.core.windows.net\share" -Scope Global -Credential (New-Object System.Management.Automation.PSCredential ("Azure\$storageAccountName", (ConvertTo-SecureString -AsPlainText -Force "$storageAccountKey") ))
 
 if (-not $restart) {
     # Handle additional script
