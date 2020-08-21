@@ -113,6 +113,7 @@ else {
 
 # Setup tasks
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mgrConfig.ps1" -OutFile c:\iac\mgrConfig.ps1
+Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\iac\mountAzFileShare.ps1
 
 & 'c:\iac\mgrConfig.ps1' -name "$name" -externaldns "$externaldns" -email "$email" -additionalScript "$additionalScript" -branch "$branch" -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -isFirstMgr:$isFirstMgr 2>&1 >> c:\iac\log.txt
 
