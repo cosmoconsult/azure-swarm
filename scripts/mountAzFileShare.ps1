@@ -12,4 +12,7 @@ param(
     $driveLetter = "S"
 )
 
-New-PSDrive -Name $driveLetter -PSProvider FileSystem -Root "\\$storageAccountName.file.core.windows.net\share" -Scope Global -Persist -Credential (New-Object System.Management.Automation.PSCredential ("Azure\$storageAccountName", (ConvertTo-SecureString -AsPlainText -Force "$storageAccountKey") ))
+$secpassword = ConvertTo-SecureString $storageAccountKey -AsPlainText -Force
+$creds = New-Object System.Management.Automation.PSCredential("Azure\$storageAccountName", $secpassword)
+New-SmbGlobalMapping -RemotePath "\\$storageAccountName.file.core.windows.net\share" -Credential $creds -LocalPath $driveLetter -Persistent $true -RequirePrivacy $true
+Invoke-Expression "icacls.exe $($driveLetter):\ /grant 'Everyone:(OI)(CI)(F)'"
