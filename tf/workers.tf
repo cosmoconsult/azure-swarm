@@ -1,63 +1,101 @@
-resource "azurerm_windows_virtual_machine_scale_set" "worker" {
-  name                 = "${var.name}-worker-vmss"
-  resource_group_name  = azurerm_resource_group.main.name
-  location             = azurerm_resource_group.main.location
-  sku                  = var.workerVmssSettings.size
-  instances            = var.workerVmssSettings.number
-  admin_username       = var.adminUsername
-  admin_password       = random_password.password.result
-  computer_name_prefix = "worker"
+resource "azurerm_virtual_machine_scale_set" "worker" {
+  name                = "${local.name}-worker-vmss"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  upgrade_policy_mode = "Manual"
+  boot_diagnostics {
+    enabled     = true
+    storage_uri = azurerm_storage_account.main.primary_blob_endpoint
+  }
 
-  source_image_reference {
+  sku {
+    name     = var.workerVmssSettings.size
+    tier     = "Standard"
+    capacity = var.workerVmssSettings.number
+  }
+
+  os_profile {
+    computer_name_prefix = "worker"
+    admin_username       = var.adminUsername
+    admin_password       = random_password.password.result
+  }
+
+  network_profile {
+    name    = "worker_profile"
+    primary = true
+
+    ip_configuration {
+      name      = "internal"
+      subnet_id = azurerm_subnet.worker.id
+      primary   = true
+    }
+  }
+
+  storage_profile_os_disk {
+    name              = ""
+    caching           = "ReadWrite"
+    create_option     = "FromImage"
+    managed_disk_type = "Premium_LRS"
+  }
+
+  storage_profile_image_reference {
     publisher = "MicrosoftWindowsServer"
     offer     = "WindowsServer"
     sku       = var.workerVmssSettings.sku
     version   = var.workerVmssSettings.version
   }
 
-  network_interface {
-    name    = "worker-nic"
-    primary = true
+  extension {
+    name                       = "initWorker"
+    publisher                  = "Microsoft.Compute"
+    type                       = "CustomScriptExtension"
+    type_handler_version       = "1.10"
+    auto_upgrade_minor_version = true
 
-    ip_configuration {
-      name      = "dynamic-worker"
-      primary   = true
-      subnet_id = azurerm_subnet.worker.id
-    }
+    settings = jsonencode({
+      "fileUris" = [
+        "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/${var.branch}/scripts/workerSetupTasks.ps1"
+      ]
+    })
+
+    protected_settings = jsonencode({
+      "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File workerSetupTasks.ps1 -images \"${var.images}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptWorker}\" -name \"${local.name}\" -storageAccountName \"${azurerm_storage_account.main.name}\" -storageAccountKey \"${azurerm_storage_account.main.primary_access_key}\""
+    })
   }
 
-  os_disk {
-    storage_account_type = "Premium_LRS"
-    caching              = "ReadWrite"
+  os_profile_windows_config {
+    enable_automatic_upgrades = false
+    provision_vm_agent        = true
   }
 
   identity {
     type = "SystemAssigned"
   }
+
+  depends_on = [
+    azurerm_virtual_machine_extension.initMgr1
+  ]
 }
 
 resource "azurerm_subnet" "worker" {
-  name                 = "${var.name}-worker-sub"
+  name                 = "${local.name}-worker-sub"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = ["10.0.4.0/22"]
 }
 
-resource "azurerm_virtual_machine_scale_set_extension" "initWorker" {
-  name                         = "example"
-  virtual_machine_scale_set_id = azurerm_windows_virtual_machine_scale_set.worker.id
-  publisher                    = "Microsoft.Compute"
-  type                         = "CustomScriptExtension"
-  type_handler_version         = "1.10"
-  auto_upgrade_minor_version   = true
+resource "azurerm_key_vault_access_policy" "worker" {
+  key_vault_id = azurerm_key_vault.main.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_virtual_machine_scale_set.worker.identity.0.principal_id
 
-  settings = jsonencode({
-    "fileUris" = [
-      "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/${var.branch}/scripts/workerSetupTasks.ps1"
-    ]
-  })
+  key_permissions = [
+  ]
 
-  protected_settings = jsonencode({
-    "commandToExecute" : "powershell -ExecutionPolicy Unrestricted -File workerSetupTasks.ps1 -images \"${var.images}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptWorker}\" -name \"${var.name}\""
-  })
+  secret_permissions = [
+    "Get"
+  ]
+
+  certificate_permissions = [
+  ]
 }
