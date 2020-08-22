@@ -19,12 +19,12 @@ output "password" {
 }
 
 resource "azurerm_resource_group" "main" {
-  name     = var.name
+  name     = local.name
   location = var.location
 }
 
 resource "azurerm_virtual_network" "main" {
-  name                = "${var.name}-vnet"
+  name                = "${local.name}-vnet"
   address_space       = ["10.0.3.0/24", "10.0.4.0/22", "10.0.8.0/23"]
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
@@ -32,8 +32,23 @@ resource "azurerm_virtual_network" "main" {
 
 data "azurerm_client_config" "current" {}
 
+resource "random_string" "name" {
+  length  = 8
+  special = false
+  number  = false
+  upper   = false
+}
+
+output "ssh-to-jumpbox" {
+  value = "ssh -l ${var.adminUsername} ${azurerm_public_ip.jumpbox.fqdn}"
+}
+
+output "portainer" {
+  value = "https://${azurerm_public_ip.main-lb.fqdn}/portainer/"
+}
+
 resource "azurerm_key_vault" "main" {
-  name                        = "${var.name}-vault"
+  name                        = "${local.name}-vault"
   location                    = azurerm_resource_group.main.location
   resource_group_name         = azurerm_resource_group.main.name
   enabled_for_deployment      = true
