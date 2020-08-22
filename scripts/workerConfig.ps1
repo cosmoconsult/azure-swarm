@@ -106,7 +106,17 @@ while ($tries -le 10) {
     }
 }
 
-. c:\iac\mountAzFileShare.ps1 -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -driveLetter "S"
+$tries = 1
+while ($tries -le 10) { 
+    Write-Host "Trying to mount Azure File Share"
+    . c:\iac\mountAzFileShare.ps1 -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -driveLetter "S"
+    if (Test-Path "S:") {
+        $tries = 11
+    }
+    Write-Host "Try $tries failed"
+    $tries = $tries + 1
+    Start-Sleep -Seconds 30
+}
 
 if (-not $restart) {
     # Handle additional script
