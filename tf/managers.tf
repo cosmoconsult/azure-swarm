@@ -1,12 +1,12 @@
 resource "azurerm_subnet" "mgr" {
-  name                 = "${var.name}-mgr-sub"
+  name                 = "${local.name}-mgr-sub"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = ["10.0.3.0/24"]
 }
 
 resource "azurerm_network_interface" "mgr1" {
-  name                = "${var.name}-mgr1-nic"
+  name                = "${local.name}-mgr1-nic"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
 
@@ -20,7 +20,7 @@ resource "azurerm_network_interface" "mgr1" {
 
 resource "azurerm_network_interface" "mgr2" {
   count               = var.managerVmSettings.useThree ? 1 : 0
-  name                = "${var.name}-mgr2-nic"
+  name                = "${local.name}-mgr2-nic"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 
@@ -34,7 +34,7 @@ resource "azurerm_network_interface" "mgr2" {
 
 resource "azurerm_network_interface" "mgr3" {
   count               = var.managerVmSettings.useThree ? 1 : 0
-  name                = "${var.name}-mgr3-nic"
+  name                = "${local.name}-mgr3-nic"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 
@@ -47,7 +47,7 @@ resource "azurerm_network_interface" "mgr3" {
 }
 
 resource "azurerm_availability_set" "mgr-avset" {
-  name                         = "${var.name}-mgr-avset"
+  name                         = "${local.name}-mgr-avset"
   location                     = azurerm_resource_group.main.location
   resource_group_name          = azurerm_resource_group.main.name
   platform_fault_domain_count  = var.managerVmSettings.useThree ? 3 : 1
@@ -56,7 +56,7 @@ resource "azurerm_availability_set" "mgr-avset" {
 }
 
 resource "azurerm_network_security_group" "mgr" {
-  name                = "${var.name}-mgr-nsg"
+  name                = "${local.name}-mgr-nsg"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 }
@@ -93,17 +93,22 @@ resource "azurerm_network_interface_security_group_association" "mgr1" {
 }
 
 resource "azurerm_windows_virtual_machine" "mgr1" {
-  name                = "${var.name}-mgr1-vm"
-  computer_name       = "mgr1"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-  size                = var.managerVmSettings.size
-  availability_set_id = azurerm_availability_set.mgr-avset.id
-  admin_username      = var.adminUsername
-  admin_password      = random_password.password.result
+  name                     = "${local.name}-mgr1-vm"
+  computer_name            = "mgr1"
+  resource_group_name      = azurerm_resource_group.main.name
+  location                 = azurerm_resource_group.main.location
+  size                     = var.managerVmSettings.size
+  availability_set_id      = azurerm_availability_set.mgr-avset.id
+  admin_username           = var.adminUsername
+  admin_password           = random_password.password.result
+  enable_automatic_updates = false
   network_interface_ids = [
     azurerm_network_interface.mgr1.id,
   ]
+
+  boot_diagnostics {
+    storage_account_uri = azurerm_storage_account.main.primary_blob_endpoint
+  }
 
   source_image_reference {
     publisher = "MicrosoftWindowsServer"
@@ -140,27 +145,32 @@ resource "azurerm_virtual_machine_extension" "initMgr1" {
   })
 
   protected_settings = jsonencode({
-    "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${var.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptJumpbox}\" -name \"${var.name}\" -isFirstmgr"
+    "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${local.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptJumpbox}\" -name \"${local.name}\" -storageAccountName \"${azurerm_storage_account.main.name}\" -storageAccountKey \"${azurerm_storage_account.main.primary_access_key}\" -isFirstmgr"
   })
 
 }
 
 resource "azurerm_windows_virtual_machine" "mgr2" {
-  count               = var.managerVmSettings.useThree ? 1 : 0
-  name                = "${var.name}-mgr2-vm"
-  computer_name       = "mgr2"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-  size                = var.managerVmSettings.size
-  availability_set_id = azurerm_availability_set.mgr-avset.id
-  admin_username      = var.adminUsername
-  admin_password      = random_password.password.result
+  count                    = var.managerVmSettings.useThree ? 1 : 0
+  name                     = "${local.name}-mgr2-vm"
+  computer_name            = "mgr2"
+  resource_group_name      = azurerm_resource_group.main.name
+  location                 = azurerm_resource_group.main.location
+  size                     = var.managerVmSettings.size
+  availability_set_id      = azurerm_availability_set.mgr-avset.id
+  admin_username           = var.adminUsername
+  admin_password           = random_password.password.result
+  enable_automatic_updates = false
   network_interface_ids = [
     azurerm_network_interface.mgr2.0.id
   ]
   depends_on = [
     azurerm_virtual_machine_extension.initMgr1
   ]
+
+  boot_diagnostics {
+    storage_account_uri = azurerm_storage_account.main.primary_blob_endpoint
+  }
 
   source_image_reference {
     publisher = "MicrosoftWindowsServer"
@@ -180,21 +190,26 @@ resource "azurerm_windows_virtual_machine" "mgr2" {
 }
 
 resource "azurerm_windows_virtual_machine" "mgr3" {
-  count               = var.managerVmSettings.useThree ? 1 : 0
-  name                = "${var.name}-mgr3-vm"
-  computer_name       = "mgr3"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-  size                = var.managerVmSettings.size
-  availability_set_id = azurerm_availability_set.mgr-avset.id
-  admin_username      = var.adminUsername
-  admin_password      = random_password.password.result
+  count                    = var.managerVmSettings.useThree ? 1 : 0
+  name                     = "${local.name}-mgr3-vm"
+  computer_name            = "mgr3"
+  resource_group_name      = azurerm_resource_group.main.name
+  location                 = azurerm_resource_group.main.location
+  size                     = var.managerVmSettings.size
+  availability_set_id      = azurerm_availability_set.mgr-avset.id
+  admin_username           = var.adminUsername
+  admin_password           = random_password.password.result
+  enable_automatic_updates = false
   network_interface_ids = [
     azurerm_network_interface.mgr3.0.id
   ]
   depends_on = [
     azurerm_virtual_machine_extension.initMgr2
   ]
+
+  boot_diagnostics {
+    storage_account_uri = azurerm_storage_account.main.primary_blob_endpoint
+  }
 
   source_image_reference {
     publisher = "MicrosoftWindowsServer"
@@ -229,7 +244,7 @@ resource "azurerm_virtual_machine_extension" "initMgr2" {
   })
 
   protected_settings = jsonencode({
-    "commandToExecute" : "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${var.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptMgr}\" -name \"${var.name}\""
+    "commandToExecute" : "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${local.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptMgr}\" -name \"${local.name}\" -storageAccountName \"${azurerm_storage_account.main.name}\" -storageAccountKey \"${azurerm_storage_account.main.primary_access_key}\""
   })
 
 }
@@ -250,7 +265,7 @@ resource "azurerm_virtual_machine_extension" "initMgr3" {
   })
 
   protected_settings = jsonencode({
-    "commandToExecute" : "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${var.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptMgr}\" -name \"${var.name}\""
+    "commandToExecute" : "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${local.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptMgr}\" -name \"${local.name}\" -storageAccountName \"${azurerm_storage_account.main.name}\" -storageAccountKey \"${azurerm_storage_account.main.primary_access_key}\""
   })
 
 }
