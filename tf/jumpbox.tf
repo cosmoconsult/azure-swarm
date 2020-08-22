@@ -1,13 +1,13 @@
 resource "azurerm_public_ip" "jumpbox" {
-  name                = "${var.name}-jumpbox-publicip"
+  name                = "${local.name}-jumpbox-publicip"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
   allocation_method   = "Static"
-  domain_name_label   = "${var.name}-ssh"
+  domain_name_label   = "${local.name}-ssh"
 }
 
 resource "azurerm_network_interface" "jumpbox" {
-  name                = "${var.name}-jumpbox-nic"
+  name                = "${local.name}-jumpbox-nic"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 
@@ -21,7 +21,7 @@ resource "azurerm_network_interface" "jumpbox" {
 }
 
 resource "azurerm_network_security_group" "jumpbox" {
-  name                = "${var.name}-jumpbox-nsg"
+  name                = "${local.name}-jumpbox-nsg"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 }
@@ -60,7 +60,7 @@ resource "azurerm_network_interface_security_group_association" "jumpbox" {
 }
 
 resource "azurerm_windows_virtual_machine" "jumpbox" {
-  name                  = "${var.name}-jumpbox-vm"
+  name                  = "${local.name}-jumpbox-vm"
   computer_name         = "jumpbox"
   location              = azurerm_resource_group.main.location
   resource_group_name   = azurerm_resource_group.main.name
@@ -108,7 +108,7 @@ resource "azurerm_virtual_machine_extension" "initJumpBox" {
 
   protected_settings = <<PROTECTED_SETTINGS
     {
-      "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File jumpboxConfig.ps1 -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptJumpbox}\" -name \"${var.name}\""
+      "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File jumpboxConfig.ps1 -branch \"${var.branch}\" -additionalScript \"${var.additionalScriptJumpbox}\" -name \"${local.name}\""
     }
   PROTECTED_SETTINGS
 

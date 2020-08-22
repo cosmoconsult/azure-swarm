@@ -1,6 +1,5 @@
-variable "name" {
-  description = "The resource group name and naming prefix which should be used where necessary"
-  default     = "test-swarm-tfe"
+locals {
+  name = "swarm-${random_string.name.result}"
 }
 
 variable "location" {
