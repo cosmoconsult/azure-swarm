@@ -33,7 +33,11 @@ param(
 
     [Parameter(Mandatory = $True)]
     [string]
-    $storageAccountKey
+    $storageAccountKey,
+
+    [Parameter(Mandatory = $True)]
+    [string]
+    $adminPwd
 )
 
 New-Item -Path c:\scripts -ItemType Directory | Out-Null	
@@ -50,6 +54,11 @@ New-NetFirewallRule -DisplayName "Allow Swarm UDP" -Direction Inbound -Action Al
 
 if ($isFirstMgr) {
     Invoke-Expression "docker swarm init --advertise-addr 10.0.3.4 --default-addr-pool 10.10.0.0/16"
+
+    # Store password as secret
+    Out-File -FilePath ".\adminPwd" -NoNewline -InputObject $adminPwd
+    docker secret create adminPwd ".\adminPwd"
+    Remove-Item ".\adminPwd"
 
     # Store joinCommand in Azure Key Vault
     $token = Invoke-Expression "docker swarm join-token -q worker"
@@ -101,11 +110,19 @@ else {
             
             Write-Host "join"
             Invoke-Expression $secretJson.value 
-            $tries = 11
+            Start-Sleep -Seconds 30
+            if ($(docker info --format '{{.Swarm.LocalNodeState}}') -eq 'active') {
+                $tries = 11
+            }
+            else {
+                docker swarm leave
+            }    
         }
         catch {
             Write-Host "Vault maybe not there yet, could still be deploying (try $tries)"
             Write-Host $_.Exception
+        }
+        finally {
             $tries = $tries + 1
             Start-Sleep -Seconds 30
         }
@@ -113,10 +130,10 @@ else {
 }
 
 # Setup profile
-if (!(Test-Path -Path $PROFILE)) {
-    New-Item -ItemType File -Path $PROFILE -Force
+if (!(Test-Path -Path $PROFILE.AllUsersAllHosts)) {
+    New-Item -ItemType File -Path $PROFILE.AllUsersAllHosts -Force
 }
-"function prompt {`"PS [`$env:COMPUTERNAME]:`$(`$executionContext.SessionState.Path.CurrentLocation)`$('>' * (`$nestedPromptLevel + 1)) `"}" | Out-File $PROFILE
+"function prompt {`"PS [`$env:COMPUTERNAME]:`$(`$executionContext.SessionState.Path.CurrentLocation)`$('>' * (`$nestedPromptLevel + 1)) `"}" | Out-File $PROFILE.AllUsersAllHosts
 
 # Setup tasks
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mgrConfig.ps1" -OutFile c:\scripts\mgrConfig.ps1

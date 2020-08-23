@@ -68,12 +68,19 @@ while ($tries -le 10) {
         $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommand?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
         Write-Host "join swarm"
         Invoke-Expression $secretJson.value 
-    
-        $tries = 11
+        Start-Sleep -Seconds 30
+        if ($(docker info --format '{{.Swarm.LocalNodeState}}') -eq 'active') {
+            $tries = 11
+        }
+        else {
+            docker swarm leave
+        }
     }
     catch {
         Write-Host "Vault maybe not there yet, could still be deploying (try $tries)"
         Write-Host $_.Exception
+    }
+    finally {
         $tries = $tries + 1
         Start-Sleep -Seconds 30
     }
