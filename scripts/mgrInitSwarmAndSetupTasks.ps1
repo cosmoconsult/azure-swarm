@@ -107,6 +107,7 @@ else {
             $content = $response.Content | ConvertFrom-Json
             $KeyVaultToken = $content.access_token
             $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommandMgr?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
+            $tries = 11
         }
         catch {
             Write-Host "Vault maybe not there yet, could still be deploying (try $tries)"
