@@ -59,7 +59,7 @@ services:
 
   portainer:
     image: portainer/portainer:windows1809-amd64
-    command: -H tcp://tasks.agent:9001 --tlsskipverify --admin-password-file 'c:\adminPwd'
+    command: -H tcp://tasks.agent:9001 --tlsskipverify --admin-password-file 'c:\\secrets\\adminPwd'
     volumes:
       - s:/portainer-data:c:/data
     networks:
@@ -84,7 +84,7 @@ services:
       - traefik
     secrets:
       - source: adminPwd
-        target: "\adminPwd"
+        target: "c:/secrets/adminPwd"
 
 networks:
   agent-network:
