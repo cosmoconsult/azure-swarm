@@ -65,38 +65,63 @@ $KeyVaultToken = $content.access_token
 $tries = 1
 while ($tries -le 10) { 
     try {
+        Write-Host "get join command (try $tries)"
+        $response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing
+        $content = $response.Content | ConvertFrom-Json
+        $KeyVaultToken = $content.access_token
         $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommand?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
-        Write-Host "join swarm"
-        Invoke-Expression $secretJson.value 
-        Start-Sleep -Seconds 30
-        $job = start-job { docker info --format '{{.Swarm.LocalNodeState}}' } 
-        $counter = 0
-        while (($job.State -like "Running") -and ($counter -lt 3)) {
-            Start-Sleep -Seconds 10
-            $counter++
-        }
-        if ($Job.State -like "Running") { $job | Stop-Job }
-        $result = ($job | Receive-Job)
-        $job | Remove-Job
-        Write-Host $result
-
-        if ($result -eq 'active') {
-            $tries = 11
-        }
-        else {
-            docker swarm leave
-        }
+        $tries = 11
     }
     catch {
         Write-Host "Vault maybe not there yet, could still be deploying (try $tries)"
         Write-Host $_.Exception
     }
     finally {
-        $tries = $tries + 1
-        Start-Sleep -Seconds 30
+        if ($tries -le 10) {
+            Write-Host "Increase tries and try again"
+            $tries = $tries + 1
+            Start-Sleep -Seconds 30
+        }
     }
 }
+$tries = 1
+while ($tries -le 10) { 
+    try {
+        Write-Host "try to join (try $tries)"
+        Invoke-Expression $secretJson.value 
+        Start-Sleep -Seconds 30
+        $job = start-job { docker info --format '{{.Swarm.LocalNodeState}}' } 
+        $counter = 0
+        while (($job.State -like "Running") -and ($counter -lt 3)) {
+            Start-Sleep -Seconds 10
+            $counter = $counter + 1
+        }
+        if ($Job.State -like "Running") { $job | Stop-Job }
+        $result = ($job | Receive-Job)
+        Write-Host "Docker info LocalNodeState result: $result"
+        $job | Remove-Job
 
+        if ($result -eq 'active') {
+            Write-Host "Successfully joined"
+            $tries = 11
+        }
+        else {
+            Write-Host "Join didn't work, trying to leave"
+            docker swarm leave
+        }   
+    }
+    catch {
+        Write-Host "Error trying to join (try $tries)"
+        Write-Host $_.Exception
+    }
+    finally {
+        if ($tries -le 10) {
+            Write-Host "Increase tries and try again"
+            $tries = $tries + 1
+            Start-Sleep -Seconds 30
+        }
+    } 
+}
 $tries = 1
 while ($tries -le 10) { 
     try {
