@@ -127,7 +127,7 @@ else {
             Write-Host "try to join (try $tries): $($secretJson.value)"
             $job = start-job -ScriptBlock { 
                 Param ($joinCommand)
-                Write-Host "$joinCommand"
+                Write-Host "wtf: $joinCommand"
                 Invoke-Expression "$joinCommand"
             } -ArgumentList $secretJson.value
             $counter = 0
