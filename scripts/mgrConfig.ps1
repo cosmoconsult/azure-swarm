@@ -44,9 +44,11 @@ if (-not $restart) {
         if (Test-Path "S:") {
             $tries = 11
         }
-        Write-Host "Try $tries failed"
-        $tries = $tries + 1
-        Start-Sleep -Seconds 30
+        else {
+            Write-Host "Try $tries failed"
+            $tries = $tries + 1
+            Start-Sleep -Seconds 30
+        }
     }
     if ($isFirstMgr) {
 
