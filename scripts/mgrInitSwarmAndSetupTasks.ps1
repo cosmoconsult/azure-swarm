@@ -114,6 +114,7 @@ else {
             Write-Host $_.Exception
         }
         finally {
+            Write-Host "Increase tries and try again"
             $tries = $tries + 1
             Start-Sleep -Seconds 30
         }
