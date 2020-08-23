@@ -114,9 +114,11 @@ else {
             Write-Host $_.Exception
         }
         finally {
-            Write-Host "Increase tries and try again"
-            $tries = $tries + 1
-            Start-Sleep -Seconds 30
+            if ($tries -le 10) {
+                Write-Host "Increase tries and try again"
+                $tries = $tries + 1
+                Start-Sleep -Seconds 30
+            }
         }
     }
     $tries = 1
@@ -150,9 +152,11 @@ else {
             Write-Host $_.Exception
         }
         finally {
-            Write-Host "Increase tries and try again"
-            $tries = $tries + 1
-            Start-Sleep -Seconds 30
+            if ($tries -le 10) {
+                Write-Host "Increase tries and try again"
+                $tries = $tries + 1
+                Start-Sleep -Seconds 30
+            }
         } 
     }
 }

@@ -108,9 +108,14 @@ if (-not $restart) {
         catch {
             Write-Host "Vault maybe not there yet, could still be deploying (try $tries)"
             Write-Host $_.Exception
-            $tries = $tries + 1
-            Start-Sleep -Seconds 30
         }
+        finally {
+            if ($tries -le 10) {
+                Write-Host "Increase tries and try again"
+                $tries = $tries + 1
+                Start-Sleep -Seconds 30
+            }
+        } 
     }
 
     Restart-Service sshd
