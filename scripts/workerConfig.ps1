@@ -88,12 +88,27 @@ while ($tries -le 10) {
 $tries = 1
 while ($tries -le 10) { 
     try {
-        Write-Host "try to join (try $tries)"
-        Invoke-Expression $secretJson.value 
-        Start-Sleep -Seconds 30
+        Write-Host "try to join (try $tries): $($secretJson.value)"
+        $job = start-job -ScriptBlock { 
+            Param ($joinCommand)
+            Invoke-Expression "$joinCommand"
+        } -ArgumentList $secretJson.value
+        $counter = 0
+        while (($job.State -like "Running") -and ($counter -lt 4)) {
+            Write-Host "check $counter"
+            Start-Sleep -Seconds 10
+            $counter = $counter + 1
+        }
+        if ($Job.State -like "Running") { $job | Stop-Job }
+        $result = ($job | Receive-Job)
+        Write-Host "Swarm join result: $result"
+        $job | Remove-Job
+
+        Write-Host "check node status (try $tries)"
         $job = start-job { docker info --format '{{.Swarm.LocalNodeState}}' } 
         $counter = 0
-        while (($job.State -like "Running") -and ($counter -lt 3)) {
+        while (($job.State -like "Running") -and ($counter -lt 4)) {
+            Write-Host "check $counter"
             Start-Sleep -Seconds 10
             $counter = $counter + 1
         }
