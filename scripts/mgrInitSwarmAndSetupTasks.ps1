@@ -56,7 +56,7 @@ if ($isFirstMgr) {
     Invoke-Expression "docker swarm init --advertise-addr 10.0.3.4 --default-addr-pool 10.10.0.0/16"
 
     # Store password as secret
-    Out-File -FilePath ".\adminPwd" -NoNewline -InputObject $adminPwd
+    Out-File -FilePath ".\adminPwd" -NoNewline -InputObject $adminPwd -Encoding ascii
     docker secret create adminPwd ".\adminPwd"
     Remove-Item ".\adminPwd"
 
@@ -136,8 +136,8 @@ else {
                 $counter = $counter + 1
             }
             if ($Job.State -like "Running") { $job | Stop-Job }
-            $result = ($job | Receive-Job)
-            Write-Host "Swarm join result: $result"
+            $jobResult = ($job | Receive-Job)
+            Write-Host "Swarm join result: $jobResult"
             $job | Remove-Job
 
             Write-Host "check node status (try $tries)"
@@ -149,11 +149,11 @@ else {
                 $counter = $counter + 1
             }
             if ($Job.State -like "Running") { $job | Stop-Job }
-            $result = ($job | Receive-Job)
-            Write-Host "Docker info LocalNodeState result: $result"
+            $jobResult = ($job | Receive-Job)
+            Write-Host "Docker info LocalNodeState result: $jobResult"
             $job | Remove-Job
 
-            if ($result -eq 'active') {
+            if ($jobResult -eq 'active') {
                 Write-Host "Successfully joined"
                 $tries = 11
             }
