@@ -42,7 +42,7 @@ New-Item -Path c:\scripts -ItemType Directory | Out-Null
 New-NetFirewallRule -DisplayName "Allow Swarm TCP" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 2377, 7946 | Out-Null
 New-NetFirewallRule -DisplayName "Allow Swarm UDP" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 4789, 7946 | Out-Null
 
-if ($isFirstMgr) {
+<#if ($isFirstMgr) {
     Invoke-Expression "docker swarm init --advertise-addr 10.0.3.4 --default-addr-pool 10.10.0.0/16"
 
     # Store joinCommand in Azure Key Vault
@@ -104,7 +104,7 @@ else {
             Start-Sleep -Seconds 30
         }
     }
-}
+}#>
 
 # Setup tasks
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mgrConfig.ps1" -OutFile c:\scripts\mgrConfig.ps1
