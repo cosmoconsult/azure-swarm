@@ -50,7 +50,19 @@ else {
     Invoke-Expression "docker swarm leave"
 }
 
-# Join Swarm and download images
+
+# Maybe pull images
+Write-Host "pull $images"
+Invoke-Expression "docker pull portainer/agent:windows1809-amd64" | Out-Null
+if (-not [string]::IsNullOrEmpty($images)) {
+    $imgArray = $images.Split(',');
+    foreach ($img in $imgArray) {
+        Write-Host "pull $img"
+        Invoke-Expression "docker pull $img" | Out-Null
+    }
+}
+
+# Join Swarm
 Write-Host "get join command"
 $response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing
 $content = $response.Content | ConvertFrom-Json
@@ -62,15 +74,6 @@ while ($tries -le 10) {
         Write-Host "join swarm"
         Invoke-Expression $secretJson.value 
     
-        # Maybe pull images
-        Write-Host "pull $images"
-        if (-not [string]::IsNullOrEmpty($images)) {
-            $imgArray = $images.Split(',');
-            foreach ($img in $imgArray) {
-                Write-Host "pull $img"
-                Invoke-Expression "docker pull $img" | Out-Null
-            }
-        }
         $tries = 11
     }
     catch {
