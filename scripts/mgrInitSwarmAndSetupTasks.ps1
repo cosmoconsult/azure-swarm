@@ -126,9 +126,9 @@ else {
         try {
             Write-Host "try to join (try $tries): $($secretJson.value)"
             $job = start-job { 
-                Write-Host "$($secretJson.value)"
-                Invoke-Expression "$($secretJson.value)"
-            } 
+                Write-Host "$input"
+                Invoke-Expression "$input"
+            } -InputObject $secretJson.value
             $counter = 0
             while (($job.State -like "Running") -and ($counter -lt 4)) {
                 Write-Host "check $counter"
