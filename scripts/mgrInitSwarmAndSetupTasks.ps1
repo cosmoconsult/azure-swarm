@@ -36,9 +36,7 @@ param(
     $storageAccountKey
 )
 
-New-Item -Path c:\iac -ItemType Directory | Out-Null	
-New-Item -Path c:\iac\le -ItemType Directory | Out-Null	
-New-Item -Path c:\iac\le\acme.json | Out-Null
+New-Item -Path c:\scripts -ItemType Directory | Out-Null	
 
 # Swarm setup
 New-NetFirewallRule -DisplayName "Allow Swarm TCP" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 2377, 7946 | Out-Null
@@ -108,16 +106,13 @@ else {
     }
 }
 
-
-
-
 # Setup tasks
-Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mgrConfig.ps1" -OutFile c:\iac\mgrConfig.ps1
-Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\iac\mountAzFileShare.ps1
+Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mgrConfig.ps1" -OutFile c:\scripts\mgrConfig.ps1
+Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\scripts\mountAzFileShare.ps1
 
-& 'c:\iac\mgrConfig.ps1' -name "$name" -externaldns "$externaldns" -email "$email" -additionalScript "$additionalScript" -branch "$branch" -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -isFirstMgr:$isFirstMgr 2>&1 >> c:\iac\log.txt
+& 'c:\scripts\mgrConfig.ps1' -name "$name" -externaldns "$externaldns" -email "$email" -additionalScript "$additionalScript" -branch "$branch" -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -isFirstMgr:$isFirstMgr 2>&1 >> c:\scripts\log.txt
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\iac\mgrConfig.ps1' -name $name -externaldns '$externaldns' -email '$email' -additionalScript '$additionalScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -isFirstMgr:`$$isFirstMgr -restart`" 2>&1 >> c:\iac\log.txt"
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\mgrConfig.ps1' -name $name -externaldns '$externaldns' -email '$email' -additionalScript '$additionalScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -isFirstMgr:`$$isFirstMgr -restart`" 2>&1 >> c:\scripts\log.txt"
 $trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "MgrConfigReboot" -Description "This task should configure the manager after a reboot"

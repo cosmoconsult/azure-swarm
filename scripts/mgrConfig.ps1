@@ -38,17 +38,33 @@ param(
 
 if (-not $restart) {
     if ($isFirstMgr) {
+        $tries = 1
+        while ($tries -le 10) { 
+            Write-Host "Trying to mount Azure File Share"
+            . c:\scripts\mountAzFileShare.ps1 -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -driveLetter "S"
+            if (Test-Path "S:") {
+                $tries = 11
+            }
+            Write-Host "Try $tries failed"
+            $tries = $tries + 1
+            Start-Sleep -Seconds 30
+        }
+
+        New-Item -Path s:\le -ItemType Directory | Out-Null	
+        New-Item -Path s:\le\acme.json | Out-Null
+
         # Deploy Portainer / Traefik
         Invoke-Expression "docker network create --driver=overlay traefik-public" | Out-Null
         Start-Sleep -Seconds 10
 
-        New-Item -Path c:\iac\compose -ItemType Directory | Out-Null
-        Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/docker-compose.yml.template" -OutFile c:\iac\compose\docker-compose.yml.template
-        $template = Get-Content 'c:\iac\compose\docker-compose.yml.template' -Raw
+        New-Item -Path s:\compose -ItemType Directory | Out-Null
+        New-Item -Path s:\portainer-data -ItemType Directory | Out-Null
+        Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/docker-compose.yml.template" -OutFile s:\compose\docker-compose.yml.template
+        $template = Get-Content 's:\compose\docker-compose.yml.template' -Raw
         $expanded = Invoke-Expression "@`"`r`n$template`r`n`"@"
-        $expanded | Out-File "c:\iac\compose\docker-compose.yml" -Encoding ASCII
+        $expanded | Out-File "s:\compose\docker-compose.yml" -Encoding ASCII
 
-        Invoke-Expression "docker stack deploy -c c:\iac\compose\docker-compose.yml base"
+        Invoke-Expression "docker stack deploy -c s:\compose\docker-compose.yml base"
     }
 
     # SSH and Choco setup
@@ -95,28 +111,16 @@ if (-not $restart) {
     Restart-Service sshd
 }
 
-$tries = 1
-while ($tries -le 10) { 
-    Write-Host "Trying to mount Azure File Share"
-    . c:\iac\mountAzFileShare.ps1 -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -driveLetter "S"
-    if (Test-Path "S:") {
-        $tries = 11
-    }
-    Write-Host "Try $tries failed"
-    $tries = $tries + 1
-    Start-Sleep -Seconds 30
-}
-
 if (-not $restart) {
     # Handle additional script
     if ($additionalScript -ne "") {
-        Invoke-WebRequest -UseBasicParsing -Uri $additionalScript -OutFile 'c:\iac\additionalScript.ps1'
-        & 'c:\iac\additionalScript.ps1' -branch "$branch" -externaldns "$externaldns"
+        Invoke-WebRequest -UseBasicParsing -Uri $additionalScript -OutFile 'c:\scripts\additionalScript.ps1'
+        & 'c:\scripts\additionalScript.ps1' -branch "$branch" -externaldns "$externaldns"
     }
 }
 else {
     # Handle additional script
     if ($additionalScript -ne "") {
-        & 'c:\iac\additionalScript.ps1' -branch "$branch" -externaldns "$externaldns" -restart
+        & 'c:\scripts\additionalScript.ps1' -branch "$branch" -externaldns "$externaldns" -restart
     }
 }

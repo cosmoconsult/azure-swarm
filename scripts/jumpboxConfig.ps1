@@ -62,13 +62,13 @@ if (-not $restart) {
 
     # Handle additional script
     if ($additionalScript -ne "") {
-        Invoke-WebRequest -UseBasicParsing -Uri $additionalScript -OutFile 'c:\iac\additionalScript.ps1'
-        & 'c:\iac\additionalScript.ps1' -branch "$branch"
+        Invoke-WebRequest -UseBasicParsing -Uri $additionalScript -OutFile 'c:\scripts\additionalScript.ps1'
+        & 'c:\scripts\additionalScript.ps1' -branch "$branch"
     }
 }
 else {
     # Handle additional script
     if ($additionalScript -ne "") {
-        & 'c:\iac\additionalScript.ps1' -branch "$branch" -restart
+        & 'c:\scripts\additionalScript.ps1' -branch "$branch" -restart
     }
 }

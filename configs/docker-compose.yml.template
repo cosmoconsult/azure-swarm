@@ -16,7 +16,7 @@ services:
       - --certificatesresolvers.myresolver.acme.storage=c:/le/acme.json
       - --serversTransport.insecureSkipVerify=true
     volumes:
-      - source: 'C:/iac/le'
+      - source: 'S:/le'
         target: 'C:/le'
         type: bind
       - source: '\\.\pipe\docker_engine'
@@ -61,7 +61,7 @@ services:
     image: portainer/portainer:windows1809-amd64
     command: -H tcp://tasks.agent:9001 --tlsskipverify
     volumes:
-      - portainer-data:c:/data
+      - s:/portainer-data:c:/data
     networks:
       - agent-network
       - traefik-public
@@ -88,6 +88,3 @@ networks:
     attachable: true
   traefik-public:
     external: true
-
-volumes:
-  portainer-data:

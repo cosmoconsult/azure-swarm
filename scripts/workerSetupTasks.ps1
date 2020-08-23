@@ -24,16 +24,28 @@ param(
     $storageAccountKey
 )
 
-New-Item -Path c:\iac -ItemType Directory | Out-Null
-Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/workerConfig.ps1" -OutFile c:\iac\workerConfig.ps1
-Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\iac\mountAzFileShare.ps1
+New-Item -Path c:\scripts -ItemType Directory | Out-Null
+Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/workerConfig.ps1" -OutFile c:\scripts\workerConfig.ps1
+Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\scripts\mountAzFileShare.ps1
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\iac\workerConfig.ps1' -name $name -images '$images' -additionalScript '$additionalScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey'`" 2>&1 >> c:\iac\log.txt"
+$tries = 1
+while ($tries -le 10) { 
+    Write-Host "Trying to mount Azure File Share"
+    . c:\scripts\mountAzFileShare.ps1 -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -driveLetter "S"
+    if (Test-Path "S:") {
+        $tries = 11
+    }
+    Write-Host "Try $tries failed"
+    $tries = $tries + 1
+    Start-Sleep -Seconds 30
+}
+
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\workerConfig.ps1' -name $name -images '$images' -additionalScript '$additionalScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey'`" 2>&1 >> c:\scripts\log.txt"
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddSeconds(10)
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "WorkerConfig" -Description "This task should configure the worker"
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\iac\workerConfig.ps1' -name $name -images '$images' -additionalScript '$additionalScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -restart`" 2>&1 >> c:\iac\log.txt"
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\workerConfig.ps1' -name $name -images '$images' -additionalScript '$additionalScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -restart`" 2>&1 >> c:\scripts\log.txt"
 $trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "WorkerConfigReboot" -Description "This task should configure the worker after a reboot"
