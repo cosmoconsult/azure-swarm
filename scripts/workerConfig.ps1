@@ -35,6 +35,7 @@ if (-not $restart) {
     choco install --no-progress --limit-output vim
     choco install --no-progress --limit-output openssh -params '"/SSHServerFeature"'
     Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/sshd_config_wpwd" -OutFile C:\ProgramData\ssh\sshd_config
+    New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force
     Restart-Service sshd
 
     # Swarm setup
