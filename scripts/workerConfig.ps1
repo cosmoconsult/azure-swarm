@@ -100,8 +100,8 @@ while ($tries -le 10) {
             $counter = $counter + 1
         }
         if ($Job.State -like "Running") { $job | Stop-Job }
-        $result = ($job | Receive-Job)
-        Write-Host "Swarm join result: $result"
+        $jobResult = ($job | Receive-Job)
+        Write-Host "Swarm join result: $jobResult"
         $job | Remove-Job
 
         Write-Host "check node status (try $tries)"
@@ -113,11 +113,11 @@ while ($tries -le 10) {
             $counter = $counter + 1
         }
         if ($Job.State -like "Running") { $job | Stop-Job }
-        $result = ($job | Receive-Job)
-        Write-Host "Docker info LocalNodeState result: $result"
+        $jobResult = ($job | Receive-Job)
+        Write-Host "Docker info LocalNodeState result: $jobResult"
         $job | Remove-Job
 
-        if ($result -eq 'active') {
+        if ($jobResult -eq 'active') {
             Write-Host "Successfully joined"
             $tries = 11
         }
