@@ -125,10 +125,11 @@ else {
     while ($tries -le 10) { 
         try {
             Write-Host "try to join (try $tries): $($secretJson.value)"
-            $job = start-job { 
-                Write-Host "$input"
-                Invoke-Expression "$input"
-            } -InputObject $secretJson.value
+            $job = start-job -ScriptBlock { 
+                Param ($joinCommand)
+                Write-Host "$joinCommand"
+                Invoke-Expression "$joinCommand"
+            } -ArgumentList $secretJson.value
             $counter = 0
             while (($job.State -like "Running") -and ($counter -lt 4)) {
                 Write-Host "check $counter"
