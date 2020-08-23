@@ -68,11 +68,6 @@ if (-not $restart) {
 
         Invoke-Expression "docker stack deploy -c s:\compose\docker-compose.yml base"
     }
-    else {
-        start-job { "docker pull portainer/agent:windows1809-amd64" }
-        start-job { "docker pull portainer/portainer:windows1809-amd64" }
-        start-job { "docker pull traefik:2.2-windowsservercore-1809" }
-    }
 
     # SSH and Choco setup
     Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
