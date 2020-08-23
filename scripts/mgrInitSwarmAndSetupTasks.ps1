@@ -111,7 +111,17 @@ else {
             Write-Host "join"
             Invoke-Expression $secretJson.value 
             Start-Sleep -Seconds 30
-            if ($(docker info --format '{{.Swarm.LocalNodeState}}') -eq 'active') {
+            $job = Invoke-Command -ScriptBlock { docker info --format '{{.Swarm.LocalNodeState}}' } -AsJob -JobName nodeState
+            $counter = 0
+            while (($job.State -like "Running") -and ($counter -lt 3)) {
+                Start-Sleep -Seconds 10
+                $counter++
+            }
+            if ($Job.State -like "Running") { $job | Stop-Job }
+            $result = ($job | Receive-Job)
+            $job | Remove-Job
+
+            if ($result -eq 'active') {
                 $tries = 11
             }
             else {
