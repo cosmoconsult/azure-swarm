@@ -37,18 +37,18 @@ param(
 )
 
 if (-not $restart) {
-    if ($isFirstMgr) {
-        $tries = 1
-        while ($tries -le 10) { 
-            Write-Host "Trying to mount Azure File Share"
-            . c:\scripts\mountAzFileShare.ps1 -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -driveLetter "S"
-            if (Test-Path "S:") {
-                $tries = 11
-            }
-            Write-Host "Try $tries failed"
-            $tries = $tries + 1
-            Start-Sleep -Seconds 30
+    $tries = 1
+    while ($tries -le 10) { 
+        Write-Host "Trying to mount Azure File Share"
+        . c:\scripts\mountAzFileShare.ps1 -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -driveLetter "S"
+        if (Test-Path "S:") {
+            $tries = 11
         }
+        Write-Host "Try $tries failed"
+        $tries = $tries + 1
+        Start-Sleep -Seconds 30
+    }
+    if ($isFirstMgr) {
 
         New-Item -Path s:\le -ItemType Directory | Out-Null	
         New-Item -Path s:\le\acme.json | Out-Null
