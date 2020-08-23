@@ -33,10 +33,20 @@ param(
 
     [Parameter(Mandatory = $True)]
     [string]
-    $storageAccountKey
+    $storageAccountKey,
+
+    [Parameter(Mandatory = $True)]
+    [string]
+    $adminPwd
 )
 
 New-Item -Path c:\scripts -ItemType Directory | Out-Null	
+
+# Make sure the latest Docker EE is installed
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+Install-Module DockerMsftProvider -Force
+Install-Package Docker -ProviderName DockerMsftProvider -Force
+Start-Service docker
 
 # Swarm setup
 New-NetFirewallRule -DisplayName "Allow Swarm TCP" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 2377, 7946 | Out-Null
@@ -44,6 +54,11 @@ New-NetFirewallRule -DisplayName "Allow Swarm UDP" -Direction Inbound -Action Al
 
 if ($isFirstMgr) {
     Invoke-Expression "docker swarm init --advertise-addr 10.0.3.4 --default-addr-pool 10.10.0.0/16"
+
+    # Store password as secret
+    Out-File -FilePath ".\adminPwd" -NoNewline -InputObject $adminPwd -Encoding ascii
+    docker secret create adminPwd ".\adminPwd"
+    Remove-Item ".\adminPwd"
 
     # Store joinCommand in Azure Key Vault
     $token = Invoke-Expression "docker swarm join-token -q worker"
@@ -92,19 +107,80 @@ else {
             $content = $response.Content | ConvertFrom-Json
             $KeyVaultToken = $content.access_token
             $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommandMgr?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
-            
-            Write-Host "join"
-            Invoke-Expression $secretJson.value 
             $tries = 11
         }
         catch {
             Write-Host "Vault maybe not there yet, could still be deploying (try $tries)"
             Write-Host $_.Exception
-            $tries = $tries + 1
-            Start-Sleep -Seconds 30
+        }
+        finally {
+            if ($tries -le 10) {
+                Write-Host "Increase tries and try again"
+                $tries = $tries + 1
+                Start-Sleep -Seconds 30
+            }
         }
     }
+    $tries = 1
+    while ($tries -le 10) { 
+        try {
+            Write-Host "try to join (try $tries): $($secretJson.value)"
+            $job = start-job -ScriptBlock { 
+                Param ($joinCommand)
+                Invoke-Expression "$joinCommand"
+            } -ArgumentList $secretJson.value
+            $counter = 0
+            while (($job.State -like "Running") -and ($counter -lt 4)) {
+                Write-Host "check $counter"
+                Start-Sleep -Seconds 10
+                $counter = $counter + 1
+            }
+            if ($Job.State -like "Running") { $job | Stop-Job }
+            $jobResult = ($job | Receive-Job)
+            Write-Host "Swarm join result: $jobResult"
+            $job | Remove-Job
+
+            Write-Host "check node status (try $tries)"
+            $job = start-job { docker info --format '{{.Swarm.LocalNodeState}}' } 
+            $counter = 0
+            while (($job.State -like "Running") -and ($counter -lt 4)) {
+                Write-Host "check $counter"
+                Start-Sleep -Seconds 10
+                $counter = $counter + 1
+            }
+            if ($Job.State -like "Running") { $job | Stop-Job }
+            $jobResult = ($job | Receive-Job)
+            Write-Host "Docker info LocalNodeState result: $jobResult"
+            $job | Remove-Job
+
+            if ($jobResult -eq 'active') {
+                Write-Host "Successfully joined"
+                $tries = 11
+            }
+            else {
+                Write-Host "Join didn't work, trying to leave"
+                docker swarm leave
+            }   
+        }
+        catch {
+            Write-Host "Error trying to join (try $tries)"
+            Write-Host $_.Exception
+        }
+        finally {
+            if ($tries -le 10) {
+                Write-Host "Increase tries and try again"
+                $tries = $tries + 1
+                Start-Sleep -Seconds 30
+            }
+        } 
+    }
 }
+
+# Setup profile
+if (!(Test-Path -Path $PROFILE.AllUsersAllHosts)) {
+    New-Item -ItemType File -Path $PROFILE.AllUsersAllHosts -Force
+}
+"function prompt {`"PS [`$env:COMPUTERNAME]:`$(`$executionContext.SessionState.Path.CurrentLocation)`$('>' * (`$nestedPromptLevel + 1)) `"}" | Out-File $PROFILE.AllUsersAllHosts
 
 # Setup tasks
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mgrConfig.ps1" -OutFile c:\scripts\mgrConfig.ps1

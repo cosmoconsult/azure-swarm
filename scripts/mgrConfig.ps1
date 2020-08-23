@@ -37,18 +37,20 @@ param(
 )
 
 if (-not $restart) {
-    if ($isFirstMgr) {
-        $tries = 1
-        while ($tries -le 10) { 
-            Write-Host "Trying to mount Azure File Share"
-            . c:\scripts\mountAzFileShare.ps1 -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -driveLetter "S"
-            if (Test-Path "S:") {
-                $tries = 11
-            }
+    $tries = 1
+    while ($tries -le 10) { 
+        Write-Host "Trying to mount Azure File Share"
+        . c:\scripts\mountAzFileShare.ps1 -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -driveLetter "S"
+        if (Test-Path "S:") {
+            $tries = 11
+        }
+        else {
             Write-Host "Try $tries failed"
             $tries = $tries + 1
             Start-Sleep -Seconds 30
         }
+    }
+    if ($isFirstMgr) {
 
         New-Item -Path s:\le -ItemType Directory | Out-Null	
         New-Item -Path s:\le\acme.json | Out-Null
@@ -103,11 +105,17 @@ if (-not $restart) {
         catch {
             Write-Host "Vault maybe not there yet, could still be deploying (try $tries)"
             Write-Host $_.Exception
-            $tries = $tries + 1
-            Start-Sleep -Seconds 30
         }
+        finally {
+            if ($tries -le 10) {
+                Write-Host "Increase tries and try again"
+                $tries = $tries + 1
+                Start-Sleep -Seconds 30
+            }
+        } 
     }
 
+    New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force
     Restart-Service sshd
 }
 

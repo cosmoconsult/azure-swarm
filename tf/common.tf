@@ -12,6 +12,10 @@ resource "random_password" "password" {
   length           = 16
   special          = true
   override_special = "_%@"
+  min_lower        = 1
+  min_numeric      = 1
+  min_special      = 1
+  min_upper        = 1
 }
 
 output "password" {
@@ -45,6 +49,10 @@ output "ssh-to-jumpbox" {
 
 output "portainer" {
   value = "https://${azurerm_public_ip.main-lb.fqdn}/portainer/"
+}
+
+output "ssh-copy-private-key" {
+  value = "If you know what you are doing (this is copying your PRIVATE ssh key): ssh -l ${var.adminUsername} ${azurerm_public_ip.jumpbox.fqdn} \"mkdir c:\\users\\${var.adminUsername}\\.ssh\"; scp $HOME\\.ssh\\id_rsa ${var.adminUsername}@${azurerm_public_ip.jumpbox.fqdn}:c:\\users\\${var.adminUsername}\\.ssh"
 }
 
 resource "azurerm_key_vault" "main" {
