@@ -54,7 +54,7 @@ if (-not $restart) {
         New-Item -Path s:\le\acme.json | Out-Null
 
         # Deploy Portainer / Traefik
-        #Invoke-Expression "docker network create --driver=overlay traefik-public" | Out-Null
+        Invoke-Expression "docker network create --driver=overlay traefik-public" | Out-Null
         Start-Sleep -Seconds 10
 
         New-Item -Path s:\compose -ItemType Directory | Out-Null
@@ -64,7 +64,7 @@ if (-not $restart) {
         $expanded = Invoke-Expression "@`"`r`n$template`r`n`"@"
         $expanded | Out-File "s:\compose\docker-compose.yml" -Encoding ASCII
 
-        #Invoke-Expression "docker stack deploy -c s:\compose\docker-compose.yml base"
+        Invoke-Expression "docker stack deploy -c s:\compose\docker-compose.yml base"
     }
 
     # SSH and Choco setup

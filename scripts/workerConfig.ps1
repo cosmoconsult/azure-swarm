@@ -37,16 +37,21 @@ if (-not $restart) {
     Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/sshd_config_wpwd" -OutFile C:\ProgramData\ssh\sshd_config
     Restart-Service sshd
 
+    # Make sure the latest Docker EE is installed
+    Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+    Install-Module DockerMsftProvider -Force
+    Install-Package Docker -ProviderName DockerMsftProvider -Force
+
     # Swarm setup
     New-NetFirewallRule -DisplayName "Allow Swarm TCP" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 2377, 7946 | Out-Null
     New-NetFirewallRule -DisplayName "Allow Swarm UDP" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 4789, 7946 | Out-Null
 }
 else {
-    #Invoke-Expression "docker swarm leave"
+    Invoke-Expression "docker swarm leave"
 }
 
 # Join Swarm and download images
-<#Write-Host "get join command"
+Write-Host "get join command"
 $response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing
 $content = $response.Content | ConvertFrom-Json
 $KeyVaultToken = $content.access_token
@@ -74,7 +79,7 @@ while ($tries -le 10) {
         $tries = $tries + 1
         Start-Sleep -Seconds 30
     }
-}#>
+}
 
 $tries = 1
 while ($tries -le 10) { 
