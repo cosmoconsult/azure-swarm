@@ -85,3 +85,8 @@ variable "additionalPostScriptJumpbox" {
   description = "additional script to call when setting up the jumpbox after the main script starts"
   default     = ""
 }
+
+variable "dockerdatapath" {
+  description = "path where the docker data is stored on the workers, relevant it is moved away from the standard path"
+  default     = "C:/ProgramData/docker"
+}
