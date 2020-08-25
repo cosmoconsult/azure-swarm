@@ -29,6 +29,28 @@ param(
 )
 
 if (-not $restart) {
+    # initial
+    Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/workerConfig.ps1" -OutFile c:\scripts\workerConfig.ps1
+    Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\scripts\mountAzFileShare.ps1
+
+    $tries = 1
+    while ($tries -le 10) { 
+        Write-Host "Trying to mount Azure File Share"
+        . c:\scripts\mountAzFileShare.ps1 -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -driveLetter "S"
+        if (Test-Path "S:") {
+            $tries = 11
+        }
+        Write-Host "Try $tries failed"
+        $tries = $tries + 1
+        Start-Sleep -Seconds 30
+    }
+
+    # Setup profile
+    if (!(Test-Path -Path $PROFILE.AllUsersAllHosts)) {
+        New-Item -ItemType File -Path $PROFILE.AllUsersAllHosts -Force
+    }
+    "function prompt {`"PS [`$env:COMPUTERNAME]:`$(`$executionContext.SessionState.Path.CurrentLocation)`$('>' * (`$nestedPromptLevel + 1)) `"}" | Out-File $PROFILE.AllUsersAllHosts
+
     # Choco and SSH
     Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
     choco feature enable -n allowGlobalConfirmation
@@ -41,6 +63,11 @@ if (-not $restart) {
     # Swarm setup
     New-NetFirewallRule -DisplayName "Allow Swarm TCP" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 2377, 7946 | Out-Null
     New-NetFirewallRule -DisplayName "Allow Swarm UDP" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 4789, 7946 | Out-Null
+
+    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\workerConfig.ps1' -name $name -images '$images' -additionalPostScript '$additionalPostScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -restart`" 2>&1 >> c:\scripts\log.txt"
+    $trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
+    $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+    Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "WorkerConfigReboot" -Description "This task should configure the worker after a reboot"
 }
 else {
     Invoke-Expression "docker swarm leave"

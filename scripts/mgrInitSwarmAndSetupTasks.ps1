@@ -56,18 +56,10 @@ Install-Module DockerMsftProvider -Force
 Install-Package Docker -ProviderName DockerMsftProvider -Force
 Start-Service docker
 
-if (-not $restart) {
-    # Handle additional script
-    if ($additionalPreScript -ne "") {
-        Invoke-WebRequest -UseBasicParsing -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
-        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -isFirstMgr:$isFirstMgr
-    }
-}
-else {
-    # Handle additional script
-    if ($additionalPreScript -ne "") {
-        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -isFirstMgr:$isFirstMgr -restart 
-    }
+# Handle additional script
+if ($additionalPreScript -ne "") {
+    Invoke-WebRequest -UseBasicParsing -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
+    & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -isFirstMgr:$isFirstMgr
 }
 
 # Swarm setup
