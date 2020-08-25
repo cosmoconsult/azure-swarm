@@ -9,10 +9,6 @@ param(
     
     [Parameter(Mandatory = $False)]
     [string]
-    $additionalPreScript = "",
-    
-    [Parameter(Mandatory = $False)]
-    [string]
     $additionalPostScript = "",
 
     [Parameter(Mandatory = $True)]
@@ -43,20 +39,6 @@ param(
     [string]
     $storageAccountKey
 )
-
-if (-not $restart) {
-    # Handle additional script
-    if ($additionalPreScript -ne "") {
-        Invoke-WebRequest -UseBasicParsing -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
-        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -isFirstMgr:$isFirstMgr
-    }
-}
-else {
-    # Handle additional script
-    if ($additionalPreScript -ne "") {
-        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -isFirstMgr:$isFirstMgr -restart 
-    }
-}
 
 if (-not $restart) {
     $tries = 1
