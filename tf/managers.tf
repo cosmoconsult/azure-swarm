@@ -244,7 +244,7 @@ resource "azurerm_virtual_machine_extension" "initMgr2" {
   })
 
   protected_settings = jsonencode({
-    "commandToExecute" : "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${local.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalPreScript \"${var.additionalPreScriptManager}\" -additionalPostScript \"${var.additionalPostScriptManager}\" -name \"${local.name}\" -storageAccountName \"${azurerm_storage_account.main.name}\" -storageAccountKey \"${azurerm_storage_account.main.primary_access_key}\" -adminPwd \"${random_password.password.result}\""
+    "commandToExecute" : "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${local.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalPreScript \"${var.additionalPreScriptMgr}\" -additionalPostScript \"${var.additionalPostScriptMgr}\" -name \"${local.name}\" -storageAccountName \"${azurerm_storage_account.main.name}\" -storageAccountKey \"${azurerm_storage_account.main.primary_access_key}\" -adminPwd \"${random_password.password.result}\""
   })
 
 }
@@ -265,7 +265,7 @@ resource "azurerm_virtual_machine_extension" "initMgr3" {
   })
 
   protected_settings = jsonencode({
-    "commandToExecute" : "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${local.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalPreScript \"${var.additionalPreScriptManager}\" -additionalPostScript \"${var.additionalPostScriptManager}\" -name \"${local.name}\" -storageAccountName \"${azurerm_storage_account.main.name}\" -storageAccountKey \"${azurerm_storage_account.main.primary_access_key}\" -adminPwd \"${random_password.password.result}\""
+    "commandToExecute" : "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${local.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalPreScript \"${var.additionalPreScriptMgr}\" -additionalPostScript \"${var.additionalPostScriptMgr}\" -name \"${local.name}\" -storageAccountName \"${azurerm_storage_account.main.name}\" -storageAccountKey \"${azurerm_storage_account.main.primary_access_key}\" -adminPwd \"${random_password.password.result}\""
   })
 
 }
