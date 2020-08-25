@@ -19,6 +19,10 @@ param(
     [string]
     $externaldns,
 
+    [Parameter(Mandatory = $False)]
+    [string]
+    $dockerdatapath = "C:/ProgramData/docker",
+
     [Parameter(Mandatory = $True)]
     [string]
     $name,

@@ -46,7 +46,7 @@ services:
       - source: '\\.\pipe\docker_engine'
         target: '\\.\pipe\docker_engine'
         type: npipe
-      - source: 'C:/ProgramData/docker/volumes'
+      - source: '$dockerdatapath/volumes'
         target: 'C:/ProgramData/docker/volumes'
         type: bind
     networks:
