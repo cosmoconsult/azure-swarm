@@ -56,17 +56,32 @@ variable "eMail" {
   default     = "change@me.com"
 }
 
-variable "additionalScriptWorker" {
-  description = "additional script to call when setting up workers"
+variable "additionalPreScriptWorker" {
+  description = "additional script to call when setting up workers before the main script starts"
   default     = ""
 }
 
-variable "additionalScriptMgr" {
-  description = "additional script to call when setting up managers"
+variable "additionalPostScriptWorker" {
+  description = "additional script to call when setting up workers after the main script starts"
   default     = ""
 }
 
-variable "additionalScriptJumpbox" {
-  description = "additional script to call when setting up the jumpbox"
+variable "additionalPreScriptMgr" {
+  description = "additional script to call when setting up managers before the main script starts"
+  default     = ""
+}
+
+variable "additionalPostScriptMgr" {
+  description = "additional script to call when setting up managers after the main script starts"
+  default     = ""
+}
+
+variable "additionalPreScriptJumpbox" {
+  description = "additional script to call when setting up the jumpbox before the main script starts"
+  default     = ""
+}
+
+variable "additionalPostScriptJumpbox" {
+  description = "additional script to call when setting up the jumpbox after the main script starts"
   default     = ""
 }

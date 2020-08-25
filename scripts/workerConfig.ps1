@@ -13,7 +13,11 @@ param(
     
     [Parameter(Mandatory = $False)]
     [string]
-    $additionalScript = "",
+    $additionalPreScript = "",
+    
+    [Parameter(Mandatory = $False)]
+    [string]
+    $additionalPostScript = "",
 
     [Parameter(Mandatory = $False)]
     [string]
@@ -27,6 +31,20 @@ param(
     [string]
     $storageAccountKey
 )
+
+if (-not $restart) {
+    # Handle additional script
+    if ($additionalPreScript -ne "") {
+        Invoke-WebRequest -UseBasicParsing -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
+        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch"
+    }
+}
+else {
+    # Handle additional script
+    if ($additionalPreScript -ne "") {
+        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -restart 
+    }
+}
 
 if (-not $restart) {
     # Choco and SSH
@@ -138,46 +156,47 @@ while ($tries -le 10) {
         }
     } 
 }
-$tries = 1
-while ($tries -le 10) { 
-    try {
-        Write-Host "download SSH key"
-        $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/sshPubKey?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
-        
-        $secretJson.value | Out-File 'c:\ProgramData\ssh\administrators_authorized_keys' -Encoding utf8
-
-        ### adapted (pretty much copied) from https://gitlab.com/DarwinJS/ChocoPackages/-/blob/master/openssh/tools/chocolateyinstall.ps1#L433
-        $path = "c:\ProgramData\ssh\administrators_authorized_keys"
-        $acl = Get-Acl -Path $path
-        # following SDDL implies 
-        # - owner - built in Administrators
-        # - disabled inheritance
-        # - Full access to System
-        # - Full access to built in Administrators
-        $acl.SetSecurityDescriptorSddlForm("O:BAD:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)")
-        Set-Acl -Path $path -AclObject $acl
-        ### end of copy
-        
-        $tries = 11
-    }
-    catch {
-        Write-Host "Vault maybe not there yet, could still be deploying (try $tries)"
-        Write-Host $_.Exception
-        $tries = $tries + 1
-        Start-Sleep -Seconds 30
-    }
-}
 
 if (-not $restart) {
+    $tries = 1
+    while ($tries -le 10) { 
+        try {
+            Write-Host "download SSH key"
+            $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/sshPubKey?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
+        
+            $secretJson.value | Out-File 'c:\ProgramData\ssh\administrators_authorized_keys' -Encoding utf8
+
+            ### adapted (pretty much copied) from https://gitlab.com/DarwinJS/ChocoPackages/-/blob/master/openssh/tools/chocolateyinstall.ps1#L433
+            $path = "c:\ProgramData\ssh\administrators_authorized_keys"
+            $acl = Get-Acl -Path $path
+            # following SDDL implies 
+            # - owner - built in Administrators
+            # - disabled inheritance
+            # - Full access to System
+            # - Full access to built in Administrators
+            $acl.SetSecurityDescriptorSddlForm("O:BAD:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)")
+            Set-Acl -Path $path -AclObject $acl
+            ### end of copy
+        
+            $tries = 11
+        }
+        catch {
+            Write-Host "Vault maybe not there yet, could still be deploying (try $tries)"
+            Write-Host $_.Exception
+            $tries = $tries + 1
+            Start-Sleep -Seconds 30
+        }
+    }
+
     # Handle additional script
-    if ($additionalScript -ne "") {
-        Invoke-WebRequest -UseBasicParsing -Uri $additionalScript -OutFile 'c:\scripts\additionalScript.ps1'
-        & 'c:\scripts\additionalScript.ps1' -branch "$branch"
+    if ($additionalPostScript -ne "") {
+        Invoke-WebRequest -UseBasicParsing -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch"
     }
 }
 else {
     # Handle additional script
-    if ($additionalScript -ne "") {
-        & 'c:\scripts\additionalScript.ps1' -branch "$branch" -restart 
+    if ($additionalPostScript -ne "") {
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -restart 
     }
 }

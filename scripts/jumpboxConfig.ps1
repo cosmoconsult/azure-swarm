@@ -9,12 +9,30 @@ param(
     
     [Parameter(Mandatory = $False)]
     [string]
-    $additionalScript = "",
+    $additionalPreScript = "",
+    
+    [Parameter(Mandatory = $False)]
+    [string]
+    $additionalPostScript = "",
 
     [Parameter(Mandatory = $True)]
     [string]
     $name
 )
+
+if (-not $restart) {
+    # Handle additional script
+    if ($additionalPreScript -ne "") {
+        Invoke-WebRequest -UseBasicParsing -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
+        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch"
+    }
+}
+else {
+    # Handle additional script
+    if ($additionalPreScript -ne "") {
+        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -restart 
+    }
+}
 
 if (-not $restart) {
     # SSH and Choco setup
@@ -62,14 +80,14 @@ if (-not $restart) {
     Restart-Service sshd
 
     # Handle additional script
-    if ($additionalScript -ne "") {
-        Invoke-WebRequest -UseBasicParsing -Uri $additionalScript -OutFile 'c:\scripts\additionalScript.ps1'
-        & 'c:\scripts\additionalScript.ps1' -branch "$branch"
+    if ($additionalPostScript -ne "") {
+        Invoke-WebRequest -UseBasicParsing -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch"
     }
 }
 else {
     # Handle additional script
-    if ($additionalScript -ne "") {
-        & 'c:\scripts\additionalScript.ps1' -branch "$branch" -restart
+    if ($additionalPostScript -ne "") {
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -restart 
     }
 }

@@ -13,7 +13,11 @@ param(
     
     [Parameter(Mandatory = $False)]
     [string]
-    $additionalScript = "",
+    $additionalPreScript = "",
+    
+    [Parameter(Mandatory = $False)]
+    [string]
+    $additionalPostScript = "",
 
     [Parameter(Mandatory = $True)]
     [string]
@@ -186,9 +190,9 @@ if (!(Test-Path -Path $PROFILE.AllUsersAllHosts)) {
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mgrConfig.ps1" -OutFile c:\scripts\mgrConfig.ps1
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\scripts\mountAzFileShare.ps1
 
-& 'c:\scripts\mgrConfig.ps1' -name "$name" -externaldns "$externaldns" -email "$email" -additionalScript "$additionalScript" -branch "$branch" -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -isFirstMgr:$isFirstMgr 2>&1 >> c:\scripts\log.txt
+& 'c:\scripts\mgrConfig.ps1' -name "$name" -externaldns "$externaldns" -email "$email" -additionalPreScript '$additionalPreScript' -additionalPostScript '$additionalPostScript' -branch "$branch" -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -isFirstMgr:$isFirstMgr 2>&1 >> c:\scripts\log.txt
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\mgrConfig.ps1' -name $name -externaldns '$externaldns' -email '$email' -additionalScript '$additionalScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -isFirstMgr:`$$isFirstMgr -restart`" 2>&1 >> c:\scripts\log.txt"
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\mgrConfig.ps1' -name $name -externaldns '$externaldns' -email '$email' -additionalPreScript '$additionalPreScript' -additionalPostScript '$additionalPostScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -isFirstMgr:`$$isFirstMgr -restart`" 2>&1 >> c:\scripts\log.txt"
 $trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "MgrConfigReboot" -Description "This task should configure the manager after a reboot"

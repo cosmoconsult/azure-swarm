@@ -9,7 +9,11 @@ param(
     
     [Parameter(Mandatory = $False)]
     [string]
-    $additionalScript = "",
+    $additionalPreScript = "",
+    
+    [Parameter(Mandatory = $False)]
+    [string]
+    $additionalPostScript = "",
 
     [Parameter(Mandatory = $True)]
     [string]
@@ -35,6 +39,20 @@ param(
     [string]
     $storageAccountKey
 )
+
+if (-not $restart) {
+    # Handle additional script
+    if ($additionalPreScript -ne "") {
+        Invoke-WebRequest -UseBasicParsing -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
+        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch"
+    }
+}
+else {
+    # Handle additional script
+    if ($additionalPreScript -ne "") {
+        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -restart 
+    }
+}
 
 if (-not $restart) {
     $tries = 1
@@ -121,14 +139,14 @@ if (-not $restart) {
 
 if (-not $restart) {
     # Handle additional script
-    if ($additionalScript -ne "") {
-        Invoke-WebRequest -UseBasicParsing -Uri $additionalScript -OutFile 'c:\scripts\additionalScript.ps1'
-        & 'c:\scripts\additionalScript.ps1' -branch "$branch" -externaldns "$externaldns"
+    if ($additionalPostScript -ne "") {
+        Invoke-WebRequest -UseBasicParsing -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns"
     }
 }
 else {
     # Handle additional script
-    if ($additionalScript -ne "") {
-        & 'c:\scripts\additionalScript.ps1' -branch "$branch" -externaldns "$externaldns" -restart
+    if ($additionalPostScript -ne "") {
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -restart 
     }
 }
