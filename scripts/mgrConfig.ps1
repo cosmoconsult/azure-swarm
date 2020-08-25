@@ -44,13 +44,13 @@ if (-not $restart) {
     # Handle additional script
     if ($additionalPreScript -ne "") {
         Invoke-WebRequest -UseBasicParsing -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
-        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch"
+        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -isFirstMgr:$isFirstMgr
     }
 }
 else {
     # Handle additional script
     if ($additionalPreScript -ne "") {
-        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -restart 
+        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -isFirstMgr:$isFirstMgr -restart 
     }
 }
 
@@ -78,13 +78,14 @@ if (-not $restart) {
         Start-Sleep -Seconds 10
 
         New-Item -Path s:\compose -ItemType Directory | Out-Null
+        New-Item -Path s:\compose\base -ItemType Directory | Out-Null
         New-Item -Path s:\portainer-data -ItemType Directory | Out-Null
-        Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/docker-compose.yml.template" -OutFile s:\compose\docker-compose.yml.template
-        $template = Get-Content 's:\compose\docker-compose.yml.template' -Raw
+        Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/docker-compose.yml.template" -OutFile s:\compose\base\docker-compose.yml.template
+        $template = Get-Content 's:\compose\base\docker-compose.yml.template' -Raw
         $expanded = Invoke-Expression "@`"`r`n$template`r`n`"@"
-        $expanded | Out-File "s:\compose\docker-compose.yml" -Encoding ASCII
+        $expanded | Out-File "s:\compose\base\docker-compose.yml" -Encoding ASCII
 
-        Invoke-Expression "docker stack deploy -c s:\compose\docker-compose.yml base"
+        Invoke-Expression "docker stack deploy -c s:\compose\base\docker-compose.yml base"
     }
 
     # SSH and Choco setup
@@ -141,12 +142,12 @@ if (-not $restart) {
     # Handle additional script
     if ($additionalPostScript -ne "") {
         Invoke-WebRequest -UseBasicParsing -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns"
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr
     }
 }
 else {
     # Handle additional script
     if ($additionalPostScript -ne "") {
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -restart 
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr -restart 
     }
 }
