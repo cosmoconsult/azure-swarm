@@ -37,7 +37,11 @@ param(
 
     [Parameter(Mandatory = $True)]
     [string]
-    $storageAccountKey
+    $storageAccountKey,
+
+    [Parameter(Mandatory = $False)]
+    [string]
+    $authToken = $null
 )
 
 if (-not $restart) {
@@ -127,13 +131,19 @@ if (-not $restart) {
 if (-not $restart) {
     # Handle additional script
     if ($additionalPostScript -ne "") {
-        Invoke-WebRequest -UseBasicParsing -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr
+        $headers = @{ }
+        if (-not ([string]::IsNullOrEmpty($authToken))) {
+            $headers = @{
+                'Authorization' = $authToken
+            }
+        }
+        Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr -authToken "$authToken"
     }
 }
 else {
     # Handle additional script
     if ($additionalPostScript -ne "") {
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr -restart 
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr -authToken "$authToken" -restart 
     }
 }

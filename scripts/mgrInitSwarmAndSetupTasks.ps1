@@ -45,7 +45,11 @@ param(
 
     [Parameter(Mandatory = $True)]
     [string]
-    $adminPwd
+    $adminPwd,
+
+    [Parameter(Mandatory = $False)]
+    [string]
+    $authToken = $null
 )
 
 New-Item -Path c:\scripts -ItemType Directory | Out-Null	
@@ -58,8 +62,14 @@ Start-Service docker
 
 # Handle additional script
 if ($additionalPreScript -ne "") {
-    Invoke-WebRequest -UseBasicParsing -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
-    & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -isFirstMgr:$isFirstMgr
+    $headers = @{ }
+    if (-not ([string]::IsNullOrEmpty($authToken))) {
+        $headers = @{
+            'Authorization' = $authToken
+        }
+    }
+    Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
+    & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -isFirstMgr:$isFirstMgr -authToken "$authToken"
 }
 
 # Swarm setup
@@ -200,9 +210,9 @@ if (!(Test-Path -Path $PROFILE.AllUsersAllHosts)) {
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mgrConfig.ps1" -OutFile c:\scripts\mgrConfig.ps1
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\scripts\mountAzFileShare.ps1
 
-& 'c:\scripts\mgrConfig.ps1' -name "$name" -externaldns "$externaldns" -dockerdatapath "$dockerdatapath" -email "$email" -additionalPostScript '$additionalPostScript' -branch "$branch" -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -isFirstMgr:$isFirstMgr 2>&1 >> c:\scripts\log.txt
+& 'c:\scripts\mgrConfig.ps1' -name "$name" -externaldns "$externaldns" -dockerdatapath "$dockerdatapath" -email "$email" -additionalPostScript '$additionalPostScript' -branch "$branch" -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -isFirstMgr:$isFirstMgr -authToken "$authToken" 2>&1 >> c:\scripts\log.txt
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\mgrConfig.ps1' -name $name -externaldns '$externaldns' -dockerdatapath '$dockerdatapath' -email '$email' -additionalPostScript '$additionalPostScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -isFirstMgr:`$$isFirstMgr -restart`" 2>&1 >> c:\scripts\log.txt"
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\mgrConfig.ps1' -name $name -externaldns '$externaldns' -dockerdatapath '$dockerdatapath' -email '$email' -additionalPostScript '$additionalPostScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -isFirstMgr:`$$isFirstMgr -restart -authToken '$authToken'`" 2>&1 >> c:\scripts\log.txt"
 $trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "MgrConfigReboot" -Description "This task should configure the manager after a reboot"

@@ -17,20 +17,30 @@ param(
 
     [Parameter(Mandatory = $True)]
     [string]
-    $name
+    $name,
+
+    [Parameter(Mandatory = $False)]
+    [string]
+    $authToken = $null
 )
 
 if (-not $restart) {
     # Handle additional script
     if ($additionalPreScript -ne "") {
-        Invoke-WebRequest -UseBasicParsing -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
-        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch"
+        $headers = @{ }
+        if (-not ([string]::IsNullOrEmpty($authToken))) {
+            $headers = @{
+                'Authorization' = $authToken
+            }
+        }
+        Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
+        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -authToken "$authToken"
     }
 }
 else {
     # Handle additional script
     if ($additionalPreScript -ne "") {
-        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -restart 
+        & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -authToken "$authToken" -restart 
     }
 }
 
@@ -81,13 +91,19 @@ if (-not $restart) {
 
     # Handle additional script
     if ($additionalPostScript -ne "") {
-        Invoke-WebRequest -UseBasicParsing -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch"
+        $headers = @{ }
+        if (-not ([string]::IsNullOrEmpty($authToken))) {
+            $headers = @{
+                'Authorization' = $authToken
+            }
+        }
+        Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -authToken "$authToken"
     }
 }
 else {
     # Handle additional script
     if ($additionalPostScript -ne "") {
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -restart 
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -authToken "$authToken" -restart 
     }
 }

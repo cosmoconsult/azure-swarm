@@ -25,7 +25,11 @@ param(
 
     [Parameter(Mandatory = $True)]
     [string]
-    $storageAccountKey
+    $storageAccountKey,
+
+    [Parameter(Mandatory = $False)]
+    [string]
+    $authToken = $null
 )
 
 if (-not $restart) {
@@ -64,7 +68,7 @@ if (-not $restart) {
     New-NetFirewallRule -DisplayName "Allow Swarm TCP" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 2377, 7946 | Out-Null
     New-NetFirewallRule -DisplayName "Allow Swarm UDP" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 4789, 7946 | Out-Null
 
-    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\workerConfig.ps1' -name $name -images '$images' -additionalPostScript '$additionalPostScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -restart`" 2>&1 >> c:\scripts\log.txt"
+    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\workerConfig.ps1' -name $name -images '$images' -additionalPostScript '$additionalPostScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -authToken '$authToken' -restart`" 2>&1 >> c:\scripts\log.txt"
     $trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
     $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
     Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "WorkerConfigReboot" -Description "This task should configure the worker after a reboot"
@@ -199,13 +203,19 @@ if (-not $restart) {
 
     # Handle additional script
     if ($additionalPostScript -ne "") {
-        Invoke-WebRequest -UseBasicParsing -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch"
+        $headers = @{ }
+        if (-not ([string]::IsNullOrEmpty($authToken))) {
+            $headers = @{
+                'Authorization' = $authToken
+            }
+        }
+        Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -authToken "$authToken"
     }
 }
 else {
     # Handle additional script
     if ($additionalPostScript -ne "") {
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -restart 
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -authToken "$authToken" -restart 
     }
 }
