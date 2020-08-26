@@ -211,7 +211,7 @@ if (!(Test-Path -Path $PROFILE.AllUsersAllHosts)) {
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mgrConfig.ps1" -OutFile c:\scripts\mgrConfig.ps1
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\scripts\mountAzFileShare.ps1
 
-& 'c:\scripts\mgrConfig.ps1' -name "$name" -externaldns "$externaldns" -dockerdatapath "$dockerdatapath" -email "$email" -additionalPostScript '$additionalPostScript' -branch "$branch" -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -isFirstMgr:$isFirstMgr -authToken "$authToken" 2>&1 >> c:\scripts\log.txt
+& 'c:\scripts\mgrConfig.ps1' -name "$name" -externaldns "$externaldns" -dockerdatapath "$dockerdatapath" -email "$email" -additionalPostScript "$additionalPostScript" -branch "$branch" -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -isFirstMgr:$isFirstMgr -authToken "$authToken" 2>&1 >> c:\scripts\log.txt
 
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\mgrConfig.ps1' -name $name -externaldns '$externaldns' -dockerdatapath '$dockerdatapath' -email '$email' -additionalPostScript '$additionalPostScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -isFirstMgr:`$$isFirstMgr -restart -authToken '$authToken'`" 2>&1 >> c:\scripts\log.txt"
 $trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
