@@ -33,7 +33,6 @@ if (-not $restart) {
                 'Authorization' = $authToken
             }
         }
-        Write-Error "downloading additionalPreScript from $additionalPreScript"
         Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
         & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -authToken "$authToken"
     }
@@ -98,7 +97,6 @@ if (-not $restart) {
                 'Authorization' = $authToken
             }
         }
-        Write-Error "downloading additionalPostScript from $additionalPostScript"
         Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
         & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -authToken "$authToken"
     }

@@ -34,7 +34,6 @@ param(
 
 if (-not $restart) {
     # initial
-    Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/workerConfig.ps1" -OutFile c:\scripts\workerConfig.ps1
     Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\scripts\mountAzFileShare.ps1
 
     $tries = 1
@@ -209,7 +208,6 @@ if (-not $restart) {
                 'Authorization' = $authToken
             }
         }
-        Write-Error "downloading additionalPostScript from $additionalPostScript"
         Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
         & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -authToken "$authToken"
     }
