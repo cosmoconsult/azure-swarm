@@ -68,6 +68,7 @@ if ($additionalPreScript -ne "") {
             'Authorization' = $authToken
         }
     }
+    Write-Host "downloading additionalPreScript from $additionalPreScript"
     Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
     & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -isFirstMgr:$isFirstMgr -authToken "$authToken"
 }
