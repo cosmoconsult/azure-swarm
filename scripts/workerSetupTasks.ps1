@@ -33,6 +33,7 @@ param(
 )
 
 New-Item -Path c:\scripts -ItemType Directory | Out-Null
+Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/workerConfig.ps1" -OutFile c:\scripts\workerConfig.ps1
 
 # Make sure the latest Docker EE is installed
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
@@ -53,7 +54,6 @@ if ($additionalPreScript -ne "") {
             'Authorization' = $authToken
         }
     }
-    Write-Error "downloading additionalPreScript from $additionalPreScript"
     Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
     & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -authToken "$authToken"
 }
