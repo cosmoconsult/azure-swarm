@@ -137,7 +137,7 @@ if (-not $restart) {
                 'Authorization' = $authToken
             }
         }
-        Write-Host "downloading additionalPostScript from $additionalPostScript"
+        Write-Error "downloading additionalPostScript from $additionalPostScript"
         Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
         & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr -authToken "$authToken"
     }
