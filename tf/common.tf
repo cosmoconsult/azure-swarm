@@ -8,6 +8,10 @@ provider "azurerm" {
 }
 # FIXME: Add state
 
+provider "random" {
+  version = "=2.3.0"
+}
+
 resource "random_password" "password" {
   length           = 16
   special          = true
