@@ -98,5 +98,5 @@ variable "authHeaderValue" {
 
 variable "debugScripts" {
   description = "defines whether the called PowerShell scripts show debug output"
-  default     = false
+  default     = "false"
 }
