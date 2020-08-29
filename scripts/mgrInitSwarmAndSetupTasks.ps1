@@ -174,19 +174,8 @@ else {
                 Param ($joinCommand)
                 Invoke-Expression "$joinCommand"
             } -ArgumentList $secretJson.value
-            $counter = 0
-            Write-Debug "Job kicked off, checking for results"
-            while (($job.State -like "Running") -and ($counter -lt 4)) {
-                Write-Debug "check $counter, sleep"
-                Start-Sleep -Seconds 10
-                Write-Debug "awoke for try $counter"
-                $counter = $counter + 1
-            }
-            Write-Debug "check job state"
-            if ($Job.State -like "Running") {
-                Write-Debug "job is running, try to stop" 
-                $job | Stop-Job 
-            }
+            Write-Debug "Job kicked off, waiting for finish"
+            $job | Wait-Job -Timeout 30
             Write-Debug "get job results"
             $jobResult = ($job | Receive-Job)
             Write-Host "Swarm join result: $jobResult"
@@ -195,20 +184,8 @@ else {
 
             Write-Debug "check node status (try $tries)"
             $job = start-job { docker info --format '{{.Swarm.LocalNodeState}}' } 
-            $counter = 0
-            Write-Debug "Job kicked off, checking for results"
-            while (($job.State -like "Running") -and ($counter -lt 4)) {
-                Write-Debug "check $counter, sleep"
-                Start-Sleep -Seconds 10
-                Write-Debug "awoke for try $counter"
-                $counter = $counter + 1
-            }
-
-            Write-Debug "check job state"
-            if ($Job.State -like "Running") {
-                Write-Debug "job is running, try to stop" 
-                $job | Stop-Job 
-            }
+            Write-Debug "Job kicked off, waiting for finish"
+            $job | Wait-Job -Timeout 30
             Write-Debug "get job results"
             $jobResult = ($job | Receive-Job)
             Write-Host "Docker info LocalNodeState result: $jobResult"

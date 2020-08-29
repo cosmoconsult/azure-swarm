@@ -123,13 +123,9 @@ while ($tries -le 10) {
             Param ($joinCommand)
             Invoke-Expression "$joinCommand"
         } -ArgumentList $secretJson.value
-        $counter = 0
-        while (($job.State -like "Running") -and ($counter -lt 4)) {
-            Write-Host "check $counter"
-            Start-Sleep -Seconds 10
-            $counter = $counter + 1
-        }
-        if ($Job.State -like "Running") { $job | Stop-Job }
+        Write-Debug "Job kicked off, waiting for finish"
+        $job | Wait-Job -Timeout 30
+        Write-Debug "get job results"
         $jobResult = ($job | Receive-Job)
         Write-Host "Swarm join result: $jobResult"
         $job | Remove-Job
