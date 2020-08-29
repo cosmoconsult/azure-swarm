@@ -33,10 +33,10 @@ param(
 
     [Parameter(Mandatory = $False)]
     [switch]
-    $debug
+    $debugScripts
 )
 
-if ($debug) {
+if ($debugScripts) {
     New-Item -ItemType File -Path "c:\enableDebugging"
     $DebugPreference = "Continue"
 }
