@@ -108,7 +108,7 @@ resource "azurerm_virtual_machine_extension" "initJumpBox" {
 
   protected_settings = <<PROTECTED_SETTINGS
     {
-      "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File jumpboxConfig.ps1 -branch \"${var.branch}\" -additionalPreScript \"${var.additionalPreScriptJumpbox}\" -additionalPostScript \"${var.additionalPostScriptJumpbox}\" -name \"${local.name}\" -authToken \"${var.authHeaderValue}\""
+      "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File jumpboxConfig.ps1 -branch \"${var.branch}\" -additionalPreScript \"${var.additionalPreScriptJumpbox}\" -additionalPostScript \"${var.additionalPostScriptJumpbox}\" -name \"${local.name}\" -authToken \"${var.authHeaderValue}\" -debugScripts \"${var.debugScripts}\""
     }
   PROTECTED_SETTINGS
 
