@@ -245,7 +245,7 @@ if (!(Test-Path -Path $PROFILE.AllUsersAllHosts)) {
     New-Item -ItemType File -Path $PROFILE.AllUsersAllHosts -Force
 }
 Write-Debug "Download profile file"
-Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/profile.ps1" -Out-File $PROFILE.AllUsersAllHosts
+Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/profile.ps1" -OutFile $PROFILE.AllUsersAllHosts
 
 # Setup tasks
 Write-Debug "Download task files"
