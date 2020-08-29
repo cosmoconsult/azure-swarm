@@ -32,11 +32,11 @@ param(
     $authToken = $null,
 
     [Parameter(Mandatory = $False)]
-    [switch]
+    [string]
     $debugScripts
 )
 
-if ($debugScripts) {
+if ($debugScripts -eq "true") {
     New-Item -ItemType File -Path "c:\enableDebugging"
     $DebugPreference = "Continue"
 }
