@@ -29,8 +29,17 @@ param(
 
     [Parameter(Mandatory = $False)]
     [string]
-    $authToken = $null
+    $authToken = $null,
+
+    [Parameter(Mandatory = $False)]
+    [string]
+    $debugScripts
 )
+
+if ($debugScripts -eq "true") {
+    New-Item -ItemType File -Path "c:\enableDebugging"
+    $DebugPreference = "Continue"
+}
 
 New-Item -Path c:\scripts -ItemType Directory | Out-Null
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/workerConfig.ps1" -OutFile c:\scripts\workerConfig.ps1

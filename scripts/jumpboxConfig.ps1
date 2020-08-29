@@ -21,8 +21,17 @@ param(
 
     [Parameter(Mandatory = $False)]
     [string]
-    $authToken = $null
+    $authToken = $null,
+
+    [Parameter(Mandatory = $False)]
+    [string]
+    $debugScripts
 )
+
+if ($debugScripts -eq "true") {
+    New-Item -ItemType File -Path "c:\enableDebugging"
+    $DebugPreference = "Continue"
+}
 
 if (-not $restart) {
     # Handle additional script
