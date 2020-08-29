@@ -49,18 +49,28 @@ param(
 
     [Parameter(Mandatory = $False)]
     [string]
-    $authToken = $null
+    $authToken = $null,
+
+    [Parameter(Mandatory = $False)]
+    [switch]
+    $debug
 )
 
+if ($debug) {
+    New-Item -ItemType File -Path "c:\enableDebugging"
+    $DebugPreference = "Continue"
+}
+
+Write-Debug "Created folder"
 New-Item -Path c:\scripts -ItemType Directory | Out-Null	
 
-# Make sure the latest Docker EE is installed
+Write-Debug "Make sure the latest Docker EE is installed"
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 Install-Module DockerMsftProvider -Force
 Install-Package Docker -ProviderName DockerMsftProvider -Force
 Start-Service docker
 
-# Handle additional script
+Write-Debug "Handle additional pre script"
 if ($additionalPreScript -ne "") {
     $headers = @{ }
     if (-not ([string]::IsNullOrEmpty($authToken))) {
@@ -68,29 +78,33 @@ if ($additionalPreScript -ne "") {
             'Authorization' = $authToken
         }
     }
+    Write-Debug "Download script"
     Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
+    
+    Write-Debug "Call script"
     & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -isFirstMgr:$isFirstMgr -authToken "$authToken"
 }
 
-# Swarm setup
+Write-Debug "Swarm firewall setup"
 New-NetFirewallRule -DisplayName "Allow Swarm TCP" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 2377, 7946 | Out-Null
 New-NetFirewallRule -DisplayName "Allow Swarm UDP" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 4789, 7946 | Out-Null
 
 if ($isFirstMgr) {
+    Write-Debug "First manager, initialize swarm"
     Invoke-Expression "docker swarm init --advertise-addr 10.0.3.4 --default-addr-pool 10.10.0.0/16"
 
-    # Store password as secret
+    Write-Debug "Store password as secret"
     Out-File -FilePath ".\adminPwd" -NoNewline -InputObject $adminPwd -Encoding ascii
     docker secret create adminPwd ".\adminPwd"
     Remove-Item ".\adminPwd"
 
-    # Store joinCommand in Azure Key Vault
+    Write-Debug "Store joinCommand in Azure Key Vault"
     $token = Invoke-Expression "docker swarm join-token -q worker"
     $tokenMgr = Invoke-Expression "docker swarm join-token -q manager"
     $tries = 1
     while ($tries -le 10) { 
         try {
-            Write-Host "set join commands (try $tries)"
+            Write-Debug "set join commands (try $tries)"
             $response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing
             $content = $response.Content | ConvertFrom-Json
             $KeyVaultToken = $content.access_token
@@ -98,25 +112,30 @@ if ($isFirstMgr) {
             $Body = @{
                 value = $joinCommand
             }
-            Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommand?api-version=2016-10-01 -Method PUT -Headers @{Authorization = "Bearer $KeyVaultToken" } -Body (ConvertTo-Json $Body) -ContentType "application/json" -UseBasicParsing
+            $result = Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommand?api-version=2016-10-01 -Method PUT -Headers @{Authorization = "Bearer $KeyVaultToken" } -Body (ConvertTo-Json $Body) -ContentType "application/json" -UseBasicParsing
+            Write-Debug $result
             
             $joinCommandMgr = "docker swarm join --token $tokenMgr 10.0.3.4:2377"
             $Body = @{
                 value = $joinCommandMgr
             }
-            Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommandMgr?api-version=2016-10-01 -Method PUT -Headers @{Authorization = "Bearer $KeyVaultToken" } -Body (ConvertTo-Json $Body) -ContentType "application/json" -UseBasicParsing
+            $result = Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommandMgr?api-version=2016-10-01 -Method PUT -Headers @{Authorization = "Bearer $KeyVaultToken" } -Body (ConvertTo-Json $Body) -ContentType "application/json" -UseBasicParsing
+            Write-Debug $result
 
-            Write-Host "try to read join commands"
+            Write-Debug "try to read join commands"
             $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommand?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
+            Write-Debug "worker join command result: $secretJson"
             $secretJsonMgr = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommandMgr?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
+            Write-Debug "manager join command result: $secretJsonMgr"
 
             if ($secretJson.value -eq $joinCommand -and $secretJsonMgr.value -eq $joinCommandMgr) {
+                Write-Debug "join commands are matching"
                 $tries = 11
             }
         }
         catch {
             Write-Host "Vault maybe not there yet, could still be deploying (try $tries)"
-            Write-Host $_.Exception
+            Write-Debug $_.Exception
             $tries = $tries + 1
             Start-Sleep -Seconds 30
         }
@@ -126,11 +145,12 @@ else {
     $tries = 1
     while ($tries -le 10) { 
         try {
-            Write-Host "get join command (try $tries)"
+            Write-Debug "get join command (try $tries)"
             $response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing
             $content = $response.Content | ConvertFrom-Json
             $KeyVaultToken = $content.access_token
             $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommandMgr?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
+            Write-Debug "join command result: $secretJson"
             $tries = 11
         }
         catch {
@@ -139,42 +159,60 @@ else {
         }
         finally {
             if ($tries -le 10) {
-                Write-Host "Increase tries and try again"
+                Write-Debug "Increase tries, sleep and try again"
                 $tries = $tries + 1
                 Start-Sleep -Seconds 30
+                Write-Debug "awoke for try $tries"
             }
         }
     }
     $tries = 1
     while ($tries -le 10) { 
         try {
-            Write-Host "try to join (try $tries): $($secretJson.value)"
+            Write-Debug "try to join (try $tries): $($secretJson.value)"
             $job = start-job -ScriptBlock { 
                 Param ($joinCommand)
                 Invoke-Expression "$joinCommand"
             } -ArgumentList $secretJson.value
             $counter = 0
+            Write-Debug "Job kicked off, checking for results"
             while (($job.State -like "Running") -and ($counter -lt 4)) {
-                Write-Host "check $counter"
+                Write-Debug "check $counter, sleep"
                 Start-Sleep -Seconds 10
+                Write-Debug "awoke for try $counter"
                 $counter = $counter + 1
             }
-            if ($Job.State -like "Running") { $job | Stop-Job }
+            Write-Debug "check job state"
+            if ($Job.State -like "Running") {
+                Write-Debug "job is running, try to stop" 
+                $job | Stop-Job 
+            }
+            Write-Debug "get job results"
             $jobResult = ($job | Receive-Job)
             Write-Host "Swarm join result: $jobResult"
+            Write-Debug "try to remove job"
             $job | Remove-Job
 
-            Write-Host "check node status (try $tries)"
+            Write-Debug "check node status (try $tries)"
             $job = start-job { docker info --format '{{.Swarm.LocalNodeState}}' } 
             $counter = 0
+            Write-Debug "Job kicked off, checking for results"
             while (($job.State -like "Running") -and ($counter -lt 4)) {
-                Write-Host "check $counter"
+                Write-Debug "check $counter, sleep"
                 Start-Sleep -Seconds 10
+                Write-Debug "awoke for try $counter"
                 $counter = $counter + 1
             }
-            if ($Job.State -like "Running") { $job | Stop-Job }
+
+            Write-Debug "check job state"
+            if ($Job.State -like "Running") {
+                Write-Debug "job is running, try to stop" 
+                $job | Stop-Job 
+            }
+            Write-Debug "get job results"
             $jobResult = ($job | Receive-Job)
             Write-Host "Docker info LocalNodeState result: $jobResult"
+            Write-Debug "try to remove job"
             $job | Remove-Job
 
             if ($jobResult -eq 'active') {
@@ -192,9 +230,10 @@ else {
         }
         finally {
             if ($tries -le 10) {
-                Write-Host "Increase tries and try again"
+                Write-Debug "Increase tries and try again"
                 $tries = $tries + 1
                 Start-Sleep -Seconds 30
+                Write-Debug "awoke for try $tries"
             }
         } 
     }
@@ -202,16 +241,21 @@ else {
 
 # Setup profile
 if (!(Test-Path -Path $PROFILE.AllUsersAllHosts)) {
+    Write-Debug "Create profile file $($PROFILE.AllUsersAllHosts)"
     New-Item -ItemType File -Path $PROFILE.AllUsersAllHosts -Force
 }
-"function prompt {`"PS [`$env:COMPUTERNAME]:`$(`$executionContext.SessionState.Path.CurrentLocation)`$('>' * (`$nestedPromptLevel + 1)) `"}" | Out-File $PROFILE.AllUsersAllHosts
+Write-Debug "Download profile file"
+Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/profile.ps1" -Out-File $PROFILE.AllUsersAllHosts
 
 # Setup tasks
+Write-Debug "Download task files"
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mgrConfig.ps1" -OutFile c:\scripts\mgrConfig.ps1
 Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\scripts\mountAzFileShare.ps1
 
+Write-Debug "call mgrConfig script"
 & 'c:\scripts\mgrConfig.ps1' -name "$name" -externaldns "$externaldns" -dockerdatapath "$dockerdatapath" -email "$email" -additionalPostScript "$additionalPostScript" -branch "$branch" -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -isFirstMgr:$isFirstMgr -authToken "$authToken" 2>&1 >> c:\scripts\log.txt
 
+Write-Debug "set up reboot task"
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\mgrConfig.ps1' -name $name -externaldns '$externaldns' -dockerdatapath '$dockerdatapath' -email '$email' -additionalPostScript '$additionalPostScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -isFirstMgr:`$$isFirstMgr -restart -authToken '$authToken'`" 2>&1 >> c:\scripts\log.txt"
 $trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest

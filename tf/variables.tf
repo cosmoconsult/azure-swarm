@@ -95,3 +95,8 @@ variable "authHeaderValue" {
   description = "authorization header value to be set when downloading custom scripts, if necessary"
   default     = ""
 }
+
+variable "debugScripts" {
+  description = "defines whether the called PowerShell scripts show debug output"
+  default     = false
+}
