@@ -42,7 +42,8 @@ if (-not $restart) {
                 'Authorization' = $authToken
             }
         }
-        Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
+        try { Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1' }
+        catch { Invoke-WebRequest -UseBasicParsing -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1' }
         & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -authToken "$authToken"
     }
 }
@@ -106,7 +107,8 @@ if (-not $restart) {
                 'Authorization' = $authToken
             }
         }
-        Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1'
+        try { Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1' }
+        catch { Invoke-WebRequest -UseBasicParsing -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1' }
         & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -authToken "$authToken"
     }
 }

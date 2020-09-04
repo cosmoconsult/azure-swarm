@@ -63,7 +63,8 @@ if ($additionalPreScript -ne "") {
             'Authorization' = $authToken
         }
     }
-    Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1'
+    try { Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1' }
+    catch { Invoke-WebRequest -UseBasicParsing -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1' }
     & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -authToken "$authToken"
 }
 
