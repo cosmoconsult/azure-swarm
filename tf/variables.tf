@@ -1,5 +1,10 @@
+variable "prefix" {
+  description = "Prefix for all names"
+  default = "swarm"
+}
+
 locals {
-  name = "swarm-${random_string.name.result}"
+  name = "${var.prefix}-${random_string.name.result}"
 }
 
 variable "location" {
