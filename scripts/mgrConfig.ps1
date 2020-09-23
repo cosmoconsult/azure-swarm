@@ -74,7 +74,7 @@ if (-not $restart) {
         New-Item -Path s:\portainer-data -ItemType Directory | Out-Null
 
         Write-Debug "Download compose file"
-        Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/docker-compose.yml.template" -OutFile s:\compose\base\docker-compose.yml.template
+        [DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/docker-compose.yml.template", 5, 10, $null, 's:\compose\base\docker-compose.yml.template', $false)
         $template = Get-Content 's:\compose\base\docker-compose.yml.template' -Raw
         $expanded = Invoke-Expression "@`"`r`n$template`r`n`"@"
         $expanded | Out-File "s:\compose\base\docker-compose.yml" -Encoding ASCII
@@ -91,17 +91,16 @@ if (-not $restart) {
     choco install --no-progress --limit-output openssh -params '"/SSHServerFeature"'
 
     Write-Debug "Download ssh config file"
-    Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/sshd_config_wpwd" -OutFile C:\ProgramData\ssh\sshd_config
+    [DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/sshd_config_wpwd", 5, 10, $null, 'C:\ProgramData\ssh\sshd_config', $false)
 
     Write-Debug "try to get access token"
-    $response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing
-    $content = $response.Content | ConvertFrom-Json
+    $content = [DownloadWithRetry]::DoDownloadWithRetry('http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net', 5, 10, $null, $true) | ConvertFrom-Json
     $KeyVaultToken = $content.access_token
     $tries = 1
     while ($tries -le 10) { 
         try {
             Write-Debug "download SSH key"
-            $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/sshPubKey?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
+            $secretJson = [DownloadWithRetry]::DoDownloadWithRetry("https://$name-vault.vault.azure.net/secrets/sshPubKey?api-version=2016-10-01", 5, 10, "Bearer $KeyVaultToken", $null, $false) | ConvertFrom-Json
             Write-Debug "got $secretJson"
             
             $secretJson.value | Out-File 'c:\ProgramData\ssh\administrators_authorized_keys' -Encoding utf8
@@ -146,15 +145,8 @@ Write-Debug "Handle additional post script"
 if (-not $restart) {
     # Handle additional script
     if ($additionalPostScript -ne "") {
-        $headers = @{ }
-        if (-not ([string]::IsNullOrEmpty($authToken))) {
-            $headers = @{
-                'Authorization' = $authToken
-            }
-        }
         Write-Debug "Download script"
-        try { Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1' }
-        catch { Invoke-WebRequest -UseBasicParsing -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1' }
+        [DownloadWithRetry]::DoDownloadWithRetry($additionalPostScript, 5, 10, $authToken, 'c:\scripts\additionalPostScript.ps1', $false)
         Write-Debug "Call script"
         & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr -authToken "$authToken"
     }
@@ -164,5 +156,62 @@ else {
     if ($additionalPostScript -ne "") {
         Write-Debug "Call script"
         & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr -authToken "$authToken" -restart 
+    }
+}
+
+class DownloadWithRetry {
+    static [string] DoDownloadWithRetry([string] $uri, [int] $maxRetries, [int] $retryWaitInSeconds, [string] $authToken, [string] $outFile, [bool] $metadata) {
+        $retryCount = 0
+        $headers = @{}
+        if (-not ([string]::IsNullOrEmpty($authToken))) {
+            $headers = @{
+                'Authorization' = $authToken
+            }
+        }
+        if ($metadata) {
+            $headers.Add('Metadata', 'true')
+        }
+        Write-Host $headers.Count
+
+        while ($retryCount -le $maxRetries) {
+            try {
+                if ($headers.Count -ne 0) {
+                    if ([string]::IsNullOrEmpty($outFile)) {
+                        $result = Invoke-WebRequest -Uri $uri -Headers $headers -UseBasicParsing
+                        return $result.Content
+                    }
+                    else {
+                        $result = Invoke-WebRequest -Uri $uri -Headers $headers -UseBasicParsing -OutFile $outFile
+                        return ""
+                    }
+                }
+                else {
+                    throw;
+                }
+            }
+            catch {
+                if ($headers.Count -eq 0) {
+                    write-host "download failed"
+                }
+                try {
+                    if ([string]::IsNullOrEmpty($outFile)) {
+                        $result = Invoke-WebRequest -Uri $uri -UseBasicParsing
+                        return $result.Content
+                    }
+                    else {
+                        $result = Invoke-WebRequest -Uri $uri -UseBasicParsing -OutFile $outFile
+                        return ""
+                    }
+                }
+                catch {
+                    write-host "download failed"
+                    $retryCount++;
+                    if ($retryCount -le $maxRetries) {
+                        Start-Sleep -Seconds $retryWaitInSeconds
+                    }            
+                }
+            }
+        }
+        return ""
     }
 }

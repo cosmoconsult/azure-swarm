@@ -87,15 +87,8 @@ foreach ($disk in $disks) {
 
 Write-Debug "Handle additional pre script"
 if ($additionalPreScript -ne "") {
-    $headers = @{ }
-    if (-not ([string]::IsNullOrEmpty($authToken))) {
-        $headers = @{
-            'Authorization' = $authToken
-        }
-    }
     Write-Debug "Download script"
-    try { Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1' }
-    catch { Invoke-WebRequest -UseBasicParsing -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1' }
+    [DownloadWithRetry]::DoDownloadWithRetry($additionalPreScript, 5, 10, $authToken, 'c:\scripts\additionalPreScript.ps1', $false)
     
     Write-Debug "Call script"
     & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -isFirstMgr:$isFirstMgr -authToken "$authToken"
@@ -121,8 +114,7 @@ if ($isFirstMgr) {
     while ($tries -le 10) { 
         try {
             Write-Debug "set join commands (try $tries)"
-            $response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing
-            $content = $response.Content | ConvertFrom-Json
+            $content = [DownloadWithRetry]::DoDownloadWithRetry('http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net', 5, 10, $null, $true) | ConvertFrom-Json
             $KeyVaultToken = $content.access_token
             $joinCommand = "docker swarm join --token $token 10.0.3.4:2377"
             $Body = @{
@@ -158,30 +150,12 @@ if ($isFirstMgr) {
     }
 }
 else {
-    $tries = 1
-    while ($tries -le 10) { 
-        try {
-            Write-Debug "get join command (try $tries)"
-            $response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing
-            $content = $response.Content | ConvertFrom-Json
-            $KeyVaultToken = $content.access_token
-            $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommandMgr?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
-            Write-Debug "join command result: $secretJson"
-            $tries = 11
-        }
-        catch {
-            Write-Host "Vault maybe not there yet, could still be deploying (try $tries)"
-            Write-Host $_.Exception
-        }
-        finally {
-            if ($tries -le 10) {
-                Write-Debug "Increase tries, sleep and try again"
-                $tries = $tries + 1
-                Start-Sleep -Seconds 30
-                Write-Debug "awoke for try $tries"
-            }
-        }
-    }
+    Write-Debug "get join command (try $tries)"
+    $content = [DownloadWithRetry]::DoDownloadWithRetry('http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net', 5, 10, $null, $true) | ConvertFrom-Json
+    $KeyVaultToken = $content.access_token
+    $secretJson = [DownloadWithRetry]::DoDownloadWithRetry("https://$name-vault.vault.azure.net/secrets/JoinCommandMgr?api-version=2016-10-01", 30, 10, "Bearer $KeyVaultToken", $null, $false) | ConvertFrom-Json
+    Write-Debug "join command result: $secretJson"
+        
     $tries = 1
     while ($tries -le 10) { 
         try {
@@ -238,12 +212,12 @@ if (!(Test-Path -Path $PROFILE.AllUsersAllHosts)) {
     New-Item -ItemType File -Path $PROFILE.AllUsersAllHosts -Force
 }
 Write-Debug "Download profile file"
-Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/profile.ps1" -OutFile $PROFILE.AllUsersAllHosts
+[DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/profile.ps1", 5, 10, $null, $PROFILE.AllUsersAllHosts, $false)
 
 # Setup tasks
 Write-Debug "Download task files"
-Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mgrConfig.ps1" -OutFile c:\scripts\mgrConfig.ps1
-Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\scripts\mountAzFileShare.ps1
+[DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mgrConfig.ps1", 5, 10, $null, "c:\scripts\mgrConfig.ps1", $false)
+[DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1", 5, 10, $null, "c:\scripts\mountAzFileShare.ps1", $false)
 
 Write-Debug "call mgrConfig script"
 & 'c:\scripts\mgrConfig.ps1' -name "$name" -externaldns "$externaldns" -dockerdatapath "$dockerdatapath" -email "$email" -additionalPostScript "$additionalPostScript" -branch "$branch" -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -isFirstMgr:$isFirstMgr -authToken "$authToken" 2>&1 >> c:\scripts\log.txt
@@ -253,3 +227,60 @@ $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-Executio
 $trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
 $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "MgrConfigReboot" -Description "This task should configure the manager after a reboot"
+
+class DownloadWithRetry {
+    static [string] DoDownloadWithRetry([string] $uri, [int] $maxRetries, [int] $retryWaitInSeconds, [string] $authToken, [string] $outFile, [bool] $metadata) {
+        $retryCount = 0
+        $headers = @{}
+        if (-not ([string]::IsNullOrEmpty($authToken))) {
+            $headers = @{
+                'Authorization' = $authToken
+            }
+        }
+        if ($metadata) {
+            $headers.Add('Metadata', 'true')
+        }
+        Write-Host $headers.Count
+
+        while ($retryCount -le $maxRetries) {
+            try {
+                if ($headers.Count -ne 0) {
+                    if ([string]::IsNullOrEmpty($outFile)) {
+                        $result = Invoke-WebRequest -Uri $uri -Headers $headers -UseBasicParsing
+                        return $result.Content
+                    }
+                    else {
+                        $result = Invoke-WebRequest -Uri $uri -Headers $headers -UseBasicParsing -OutFile $outFile
+                        return ""
+                    }
+                }
+                else {
+                    throw;
+                }
+            }
+            catch {
+                if ($headers.Count -eq 0) {
+                    write-host "download failed"
+                }
+                try {
+                    if ([string]::IsNullOrEmpty($outFile)) {
+                        $result = Invoke-WebRequest -Uri $uri -UseBasicParsing
+                        return $result.Content
+                    }
+                    else {
+                        $result = Invoke-WebRequest -Uri $uri -UseBasicParsing -OutFile $outFile
+                        return ""
+                    }
+                }
+                catch {
+                    write-host "download failed"
+                    $retryCount++;
+                    if ($retryCount -le $maxRetries) {
+                        Start-Sleep -Seconds $retryWaitInSeconds
+                    }            
+                }
+            }
+        }
+        return ""
+    }
+}

@@ -42,7 +42,7 @@ if ($debugScripts -eq "true") {
 }
 
 New-Item -Path c:\scripts -ItemType Directory | Out-Null
-Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/workerConfig.ps1" -OutFile c:\scripts\workerConfig.ps1
+[DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/workerConfig.ps1", 5, 10, $null, 'c:\scripts\workerConfig.ps1', $false)
 
 # Make sure the latest Docker EE is installed
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
@@ -73,15 +73,65 @@ Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -
 
 # Handle additional script
 if ($additionalPreScript -ne "") {
-    $headers = @{ }
-    if (-not ([string]::IsNullOrEmpty($authToken))) {
-        $headers = @{
-            'Authorization' = $authToken
-        }
-    }
-    try { Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1' }
-    catch { Invoke-WebRequest -UseBasicParsing -Uri $additionalPreScript -OutFile 'c:\scripts\additionalPreScript.ps1' }
+    [DownloadWithRetry]::DoDownloadWithRetry($additionalPreScript, 5, 10, $authToken, 'c:\scripts\additionalPreScript.ps1', $false)
     & 'c:\scripts\additionalPreScript.ps1' -branch "$branch" -authToken "$authToken"
 }
 
 Restart-Computer -Force
+
+class DownloadWithRetry {
+    static [string] DoDownloadWithRetry([string] $uri, [int] $maxRetries, [int] $retryWaitInSeconds, [string] $authToken, [string] $outFile, [bool] $metadata) {
+        $retryCount = 0
+        $headers = @{}
+        if (-not ([string]::IsNullOrEmpty($authToken))) {
+            $headers = @{
+                'Authorization' = $authToken
+            }
+        }
+        if ($metadata) {
+            $headers.Add('Metadata', 'true')
+        }
+        Write-Host $headers.Count
+
+        while ($retryCount -le $maxRetries) {
+            try {
+                if ($headers.Count -ne 0) {
+                    if ([string]::IsNullOrEmpty($outFile)) {
+                        $result = Invoke-WebRequest -Uri $uri -Headers $headers -UseBasicParsing
+                        return $result.Content
+                    }
+                    else {
+                        $result = Invoke-WebRequest -Uri $uri -Headers $headers -UseBasicParsing -OutFile $outFile
+                        return ""
+                    }
+                }
+                else {
+                    throw;
+                }
+            }
+            catch {
+                if ($headers.Count -eq 0) {
+                    write-host "download failed"
+                }
+                try {
+                    if ([string]::IsNullOrEmpty($outFile)) {
+                        $result = Invoke-WebRequest -Uri $uri -UseBasicParsing
+                        return $result.Content
+                    }
+                    else {
+                        $result = Invoke-WebRequest -Uri $uri -UseBasicParsing -OutFile $outFile
+                        return ""
+                    }
+                }
+                catch {
+                    write-host "download failed"
+                    $retryCount++;
+                    if ($retryCount -le $maxRetries) {
+                        Start-Sleep -Seconds $retryWaitInSeconds
+                    }            
+                }
+            }
+        }
+        return ""
+    }
+}
