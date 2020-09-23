@@ -34,7 +34,7 @@ param(
 
 if (-not $restart) {
     # initial
-    Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\scripts\mountAzFileShare.ps1
+    Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1" -OutFile c:\scripts\mountAzFileShare.ps1 -RetryIntervalSec 10 -MaximumRetryCount 5 
 
     $tries = 1
     while ($tries -le 10) { 
@@ -59,7 +59,7 @@ if (-not $restart) {
     choco feature enable -n allowGlobalConfirmation
     choco install --no-progress --limit-output vim
     choco install --no-progress --limit-output openssh -params '"/SSHServerFeature"'
-    Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/sshd_config_wpwd" -OutFile C:\ProgramData\ssh\sshd_config
+    Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/sshd_config_wpwd" -OutFile C:\ProgramData\ssh\sshd_config -RetryIntervalSec 10 -MaximumRetryCount 5 
     New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force
     Restart-Service sshd
 
@@ -90,17 +90,17 @@ if (-not [string]::IsNullOrEmpty($images)) {
 
 # Join Swarm
 Write-Host "get join command"
-$response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing
+$response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing -RetryIntervalSec 10 -MaximumRetryCount 5 
 $content = $response.Content | ConvertFrom-Json
 $KeyVaultToken = $content.access_token
 $tries = 1
 while ($tries -le 10) { 
     try {
         Write-Host "get join command (try $tries)"
-        $response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing
+        $response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing -RetryIntervalSec 10 -MaximumRetryCount 5 
         $content = $response.Content | ConvertFrom-Json
         $KeyVaultToken = $content.access_token
-        $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommand?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
+        $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/JoinCommand?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing -RetryIntervalSec 10 -MaximumRetryCount 5 ).content | ConvertFrom-Json
         $tries = 11
     }
     catch {
@@ -170,7 +170,7 @@ if (-not $restart) {
     while ($tries -le 10) { 
         try {
             Write-Host "download SSH key"
-            $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/sshPubKey?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
+            $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/sshPubKey?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing -RetryIntervalSec 10 -MaximumRetryCount 5 ).content | ConvertFrom-Json
         
             $secretJson.value | Out-File 'c:\ProgramData\ssh\administrators_authorized_keys' -Encoding utf8
 
@@ -204,8 +204,8 @@ if (-not $restart) {
                 'Authorization' = $authToken
             }
         }
-        try { Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1' }
-        catch { Invoke-WebRequest -UseBasicParsing -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1' }
+        try { Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1' -RetryIntervalSec 10 -MaximumRetryCount 5 }
+        catch { Invoke-WebRequest -UseBasicParsing -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1' -RetryIntervalSec 10 -MaximumRetryCount 5 }
         & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -authToken "$authToken"
     }
 }

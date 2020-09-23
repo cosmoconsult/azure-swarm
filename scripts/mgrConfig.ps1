@@ -74,7 +74,7 @@ if (-not $restart) {
         New-Item -Path s:\portainer-data -ItemType Directory | Out-Null
 
         Write-Debug "Download compose file"
-        Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/docker-compose.yml.template" -OutFile s:\compose\base\docker-compose.yml.template
+        Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/docker-compose.yml.template" -OutFile s:\compose\base\docker-compose.yml.template -RetryIntervalSec 10 -MaximumRetryCount 5 
         $template = Get-Content 's:\compose\base\docker-compose.yml.template' -Raw
         $expanded = Invoke-Expression "@`"`r`n$template`r`n`"@"
         $expanded | Out-File "s:\compose\base\docker-compose.yml" -Encoding ASCII
@@ -91,17 +91,17 @@ if (-not $restart) {
     choco install --no-progress --limit-output openssh -params '"/SSHServerFeature"'
 
     Write-Debug "Download ssh config file"
-    Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/sshd_config_wpwd" -OutFile C:\ProgramData\ssh\sshd_config
+    Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/sshd_config_wpwd" -OutFile C:\ProgramData\ssh\sshd_config -RetryIntervalSec 10 -MaximumRetryCount 5 
 
     Write-Debug "try to get access token"
-    $response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing
+    $response = Invoke-WebRequest -Uri 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net' -Method GET -Headers @{Metadata = "true" } -UseBasicParsing -RetryIntervalSec 10 -MaximumRetryCount 5 
     $content = $response.Content | ConvertFrom-Json
     $KeyVaultToken = $content.access_token
     $tries = 1
     while ($tries -le 10) { 
         try {
             Write-Debug "download SSH key"
-            $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/sshPubKey?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing).content | ConvertFrom-Json
+            $secretJson = (Invoke-WebRequest -Uri https://$name-vault.vault.azure.net/secrets/sshPubKey?api-version=2016-10-01 -Method GET -Headers @{Authorization = "Bearer $KeyVaultToken" } -UseBasicParsing -RetryIntervalSec 10 -MaximumRetryCount 5 ).content | ConvertFrom-Json
             Write-Debug "got $secretJson"
             
             $secretJson.value | Out-File 'c:\ProgramData\ssh\administrators_authorized_keys' -Encoding utf8
@@ -153,8 +153,8 @@ if (-not $restart) {
             }
         }
         Write-Debug "Download script"
-        try { Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1' }
-        catch { Invoke-WebRequest -UseBasicParsing -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1' }
+        try { Invoke-WebRequest -UseBasicParsing -Headers $headers -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1' -RetryIntervalSec 10 -MaximumRetryCount 5 }
+        catch { Invoke-WebRequest -UseBasicParsing -Uri $additionalPostScript -OutFile 'c:\scripts\additionalPostScript.ps1' -RetryIntervalSec 10 -MaximumRetryCount 5 }
         Write-Debug "Call script"
         & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr -authToken "$authToken"
     }
