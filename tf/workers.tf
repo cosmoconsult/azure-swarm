@@ -43,7 +43,7 @@ resource "azurerm_virtual_machine_scale_set" "worker" {
     caching           = "ReadWrite"
     create_option     = "Empty"
     disk_size_gb      = 512
-    managed_disk_type = "StandardSSD_LRS"
+    managed_disk_type = "Premium_LRS"
   }
 
   storage_profile_image_reference {
