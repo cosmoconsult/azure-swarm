@@ -91,7 +91,6 @@ class DownloadWithRetry {
         if ($metadata) {
             $headers.Add('Metadata', 'true')
         }
-        Write-Host $headers.Count
 
         while ($retryCount -le $maxRetries) {
             try {
