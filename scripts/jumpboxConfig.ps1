@@ -138,7 +138,7 @@ class DownloadWithRetry {
                 }
             }
             catch {
-                if ($headers.Count -eq 0) {
+                if ($headers.Count -ne 0) {
                     write-host "download failed"
                 }
                 try {
