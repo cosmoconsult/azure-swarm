@@ -135,7 +135,7 @@ resource "azurerm_virtual_machine_extension" "initMgr1" {
   type_handler_version       = "1.10"
   auto_upgrade_minor_version = true
   depends_on = [
-    azurerm_key_vault.main, azurerm_managed_disk.datadisk1
+    azurerm_key_vault.main, azurerm_virtual_machine_data_disk_attachment.datadisk1
   ]
 
   settings = jsonencode({
@@ -238,7 +238,7 @@ resource "azurerm_virtual_machine_extension" "initMgr2" {
   auto_upgrade_minor_version = true
 
   depends_on = [
-    azurerm_managed_disk.datadisk2.0
+    azurerm_virtual_machine_data_disk_attachment.datadisk2.0
   ]
 
   settings = jsonencode({
@@ -263,7 +263,7 @@ resource "azurerm_virtual_machine_extension" "initMgr3" {
   auto_upgrade_minor_version = true
 
   depends_on = [
-    azurerm_managed_disk.datadisk3.0
+    azurerm_virtual_machine_data_disk_attachment.datadisk3.0
   ]
 
   settings = jsonencode({
