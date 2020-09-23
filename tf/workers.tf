@@ -39,7 +39,7 @@ resource "azurerm_virtual_machine_scale_set" "worker" {
   }
 
   storage_profile_data_disk {
-    lun               = 0
+    lun               = 10
     caching           = "ReadWrite"
     create_option     = "Empty"
     disk_size_gb      = 512

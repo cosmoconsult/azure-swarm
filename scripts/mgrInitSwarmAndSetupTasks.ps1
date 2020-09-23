@@ -70,6 +70,21 @@ Install-Module DockerMsftProvider -Force
 Install-Package Docker -ProviderName DockerMsftProvider -Force
 Start-Service docker
 
+Write-Debug "Setup data disk"
+$disks = Get-Disk | Where-Object partitionstyle -eq 'raw' | Sort-Object number
+$letters = 70..89 | ForEach-Object { [char]$_ }
+$count = 0
+$labels = "data1", "data2"
+
+foreach ($disk in $disks) {
+    $driveLetter = $letters[$count].ToString()
+    $disk | 
+    Initialize-Disk -PartitionStyle MBR -PassThru |
+    New-Partition -UseMaximumSize -DriveLetter $driveLetter |
+    Format-Volume -FileSystem NTFS -NewFileSystemLabel $labels[$count] -Confirm:$false -Force
+    $count++
+}
+
 Write-Debug "Handle additional pre script"
 if ($additionalPreScript -ne "") {
     $headers = @{ }
