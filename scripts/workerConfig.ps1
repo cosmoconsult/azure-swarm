@@ -88,7 +88,7 @@ if (-not [string]::IsNullOrEmpty($images)) {
 
 # Join Swarm
 Write-Debug "get join command (try $tries)"
-$content = [DownloadWithRetry]::DoDownloadWithRetry('http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net', 5, 10, $null, $true) | ConvertFrom-Json
+$content = [DownloadWithRetry]::DoDownloadWithRetry('http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fvault.azure.net', 5, 10, $null, $null, $true) | ConvertFrom-Json
 $KeyVaultToken = $content.access_token
 $secretJson = [DownloadWithRetry]::DoDownloadWithRetry("https://$name-vault.vault.azure.net/secrets/JoinCommand?api-version=2016-10-01", 30, 10, "Bearer $KeyVaultToken", $null, $false) | ConvertFrom-Json
 Write-Debug "join command result: $secretJson"
