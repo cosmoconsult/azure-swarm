@@ -322,3 +322,55 @@ resource "azurerm_key_vault_access_policy" "mgr3" {
   certificate_permissions = [
   ]
 }
+
+resource "azurerm_managed_disk" "datadisk1" {
+  name                 = "${local.name}-mgr1-datadisk"
+  location             = azurerm_resource_group.main.location
+  resource_group_name  = azurerm_resource_group.main.name
+  storage_account_type = "Standard_LRS"
+  create_option        = "Empty"
+  disk_size_gb         = 4
+}
+
+resource "azurerm_virtual_machine_data_disk_attachment" "datadisk1" {
+  managed_disk_id    = azurerm_managed_disk.datadisk1.id
+  virtual_machine_id = azurerm_windows_virtual_machine.mgr1.id
+  lun                = "10"
+  caching            = "ReadWrite"
+}
+
+resource "azurerm_managed_disk" "datadisk2" {
+  count                = var.managerVmSettings.useThree ? 1 : 0
+  name                 = "${local.name}-mgr2-datadisk"
+  location             = azurerm_resource_group.main.location
+  resource_group_name  = azurerm_resource_group.main.name
+  storage_account_type = "Standard_LRS"
+  create_option        = "Empty"
+  disk_size_gb         = 4
+}
+
+resource "azurerm_virtual_machine_data_disk_attachment" "datadisk2" {
+  count              = var.managerVmSettings.useThree ? 1 : 0
+  managed_disk_id    = azurerm_managed_disk.datadisk2.0.id
+  virtual_machine_id = azurerm_windows_virtual_machine.mgr2.0.id
+  lun                = "10"
+  caching            = "ReadWrite"
+}
+
+resource "azurerm_managed_disk" "datadisk3" {
+  count                = var.managerVmSettings.useThree ? 1 : 0
+  name                 = "${local.name}-mgr3-datadisk"
+  location             = azurerm_resource_group.main.location
+  resource_group_name  = azurerm_resource_group.main.name
+  storage_account_type = "Standard_LRS"
+  create_option        = "Empty"
+  disk_size_gb         = 4
+}
+
+resource "azurerm_virtual_machine_data_disk_attachment" "datadisk3" {
+  count              = var.managerVmSettings.useThree ? 1 : 0
+  managed_disk_id    = azurerm_managed_disk.datadisk3.0.id
+  virtual_machine_id = azurerm_windows_virtual_machine.mgr3.0.id
+  lun                = "10"
+  caching            = "ReadWrite"
+}
