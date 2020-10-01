@@ -1,6 +1,6 @@
 variable "prefix" {
   description = "Prefix for all names"
-  default = "swarm"
+  default     = "swarm"
 }
 
 locals {
@@ -15,10 +15,11 @@ variable "location" {
 variable "workerVmssSettings" {
   description = "The Azure VM scale set settings for the workers"
   default = {
-    size    = "Standard_D8s_v3"
-    number  = 2
-    sku     = "2019-datacenter-core-with-containers"
-    version = "17763.1158.2004131759"
+    size       = "Standard_D8s_v3"
+    number     = 2
+    sku        = "2019-datacenter-core-with-containers"
+    version    = "17763.1158.2004131759"
+    diskSizeGb = 1024
   }
 }
 

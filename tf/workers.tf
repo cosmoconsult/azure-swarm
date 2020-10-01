@@ -42,7 +42,7 @@ resource "azurerm_virtual_machine_scale_set" "worker" {
     lun               = 10
     caching           = "ReadWrite"
     create_option     = "Empty"
-    disk_size_gb      = 512
+    disk_size_gb      = var.workerVmssSettings.diskSizeGb
     managed_disk_type = "Premium_LRS"
   }
 
