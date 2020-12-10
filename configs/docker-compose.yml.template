@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   traefik:
-    image: tobiasfenster/french-reverse-proxy:2.2-windowsservercore-2004
+    image: tobiasfenster/french-reverse-proxy:2.2-windowsservercore
     command:
 #      - --log.level=DEBUG
       - --api.dashboard=true
