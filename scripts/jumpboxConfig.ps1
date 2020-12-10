@@ -139,7 +139,7 @@ class DownloadWithRetry {
             }
             catch {
                 if ($headers.Count -ne 0) {
-                    write-host "download failed"
+                    write-host "download of $uri failed"
                 }
                 try {
                     if ([string]::IsNullOrEmpty($outFile)) {
@@ -152,7 +152,7 @@ class DownloadWithRetry {
                     }
                 }
                 catch {
-                    write-host "download failed"
+                    write-host "download of $uri failed"
                     $retryCount++;
                     if ($retryCount -le $maxRetries) {
                         Start-Sleep -Seconds $retryWaitInSeconds
