@@ -1,12 +1,19 @@
+terraform {
+  backend "azurerm" {
+    key                  = "terraform.tfstate"
+    storage_account_name = "terraformforselfservice"
+    resource_group_name  = "PPI-Config-Secrets-Share"
+  }
+}
+
 provider "azurerm" {
-  version = "=2.24.0"
+  version = "=2.37.0"
   features {
     key_vault {
       purge_soft_delete_on_destroy = true
     }
   }
 }
-# FIXME: Add state
 
 provider "random" {
   version = "=2.3.0"
