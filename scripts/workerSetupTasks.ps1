@@ -33,7 +33,15 @@ param(
 
     [Parameter(Mandatory = $False)]
     [string]
-    $debugScripts
+    $debugScripts,
+
+    [Parameter(Mandatory = $False)]
+    [string]
+    $user,
+
+    [Parameter(Mandatory = $False)]
+    [string]
+    $password
 )
 
 if ($debugScripts -eq "true") {
@@ -75,8 +83,8 @@ foreach ($disk in $disks) {
 
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\workerConfig.ps1' -name $name -images '$images' -additionalPostScript '$additionalPostScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -authToken '$authToken'`" 2>&1 >> c:\scripts\log.txt"
 $trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
-$principal = New-ScheduledTaskPrincipal -UserID "VM-Administrator" -LogonType S4U -RunLevel Highest
-Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "WorkerConfigInitial" -Description "This task should configure the worker initially"
+#$principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+Register-ScheduledTask -Action $action -Trigger $trigger -User $user -Password $password -TaskName "WorkerConfigInitial" -Description "This task should configure the worker initially"
 
 # Handle additional script
 if ($additionalPreScript -ne "") {

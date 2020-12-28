@@ -115,6 +115,6 @@ resource "azurerm_virtual_machine_scale_set_extension" "initWorker" {
   })
 
   protected_settings = jsonencode({
-    "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File workerSetupTasks.ps1 -images \"${var.images}\" -branch \"${var.branch}\" -additionalPreScript \"${var.additionalPreScriptWorker}\" -additionalPostScript \"${var.additionalPostScriptWorker}\" -name \"${local.name}\" -storageAccountName \"${azurerm_storage_account.main.name}\" -storageAccountKey \"${azurerm_storage_account.main.primary_access_key}\" -authToken \"${var.authHeaderValue}\" -debugScripts \"${var.debugScripts}\""
+    "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File workerSetupTasks.ps1 -images \"${var.images}\" -branch \"${var.branch}\" -additionalPreScript \"${var.additionalPreScriptWorker}\" -additionalPostScript \"${var.additionalPostScriptWorker}\" -name \"${local.name}\" -storageAccountName \"${azurerm_storage_account.main.name}\" -storageAccountKey \"${azurerm_storage_account.main.primary_access_key}\" -authToken \"${var.authHeaderValue}\" -debugScripts \"${var.debugScripts}\" -user \"${var.adminUsername}\" -password \"${random_password.password.result}\""
   })
 }
