@@ -202,11 +202,7 @@ else {
 }
 
 if (-not $restart) {
-    Write-Host "creating cluster"
-    Write-Debug "creating cluster"
-    $user
-    $password
-
+$commands = @'
     # get all workers to create cluster
     $workers = New-Object Collections.Generic.List[string]
 
@@ -252,6 +248,12 @@ if (-not $restart) {
         Get-ClusterResource *disk* | Resume-ClusterResource
         Get-ClusterResource *disk* | Add-ClusterSharedVolume
     }
+'@
+
+    # create cluster as VM admin to be able to access each worker
+    [securestring]$secStringPassword = ConvertTo-SecureString $password -AsPlainText -Force
+    [pscredential]$credObject = New-Object System.Management.Automation.PSCredential ($user, $secStringPassword)
+    Start-Process -FilePath Powershell -LoadUserProfile -Credential $credObject -ArgumentList '-Command', $commands
 }
 
 class DownloadWithRetry {
