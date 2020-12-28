@@ -29,7 +29,15 @@ param(
 
     [Parameter(Mandatory = $False)]
     [string]
-    $authToken = $null
+    $authToken = $null,
+
+    [Parameter(Mandatory = $False)]
+    [string]
+    $user,
+
+    [Parameter(Mandatory = $False)]
+    [string]
+    $password
 )
 
 if (-not $restart) {
@@ -194,6 +202,11 @@ else {
 }
 
 if (-not $restart) {
+    Write-Host "creating cluster"
+    Write-Debug "creating cluster"
+    $user
+    $password
+
     # get all workers to create cluster
     $workers = New-Object Collections.Generic.List[string]
 
