@@ -50,6 +50,13 @@ Install-Module DockerMsftProvider -Force
 Install-Package Docker -ProviderName DockerMsftProvider -Force
 Start-Service docker
 
+Write-Debug "Setup shared disk"
+$sharedDisk = Get-Disk | Where-Object { $_.Location.Contains('LUN 0') }
+$sharedDisk | Initialize-Disk -PartitionStyle GPT
+# don't create partition/format yet
+
+Install-WindowsFeature -Name Failover-Clustering -IncludeManagementTools
+
 Write-Debug "Setup data disk"
 $disks = Get-Disk | Where-Object partitionstyle -eq 'raw' | Sort-Object number
 $letters = 70..89 | ForEach-Object { [char]$_ }

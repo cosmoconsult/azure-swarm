@@ -21,3 +21,41 @@ resource "azurerm_storage_share" "main" {
     }
   }
 }
+
+# create shared data disk via ARM template as not supported through azure_managed_disk resource
+resource "azurerm_resource_group_template_deployment" "shared_disk" {
+  name                = "shared_disk"
+  resource_group_name = azurerm_resource_group.main.name
+  deployment_mode     = "Incremental"
+  template_content    = <<TEMPLATE
+{ 
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.Compute/disks",
+      "name": "shared_disk",
+      "location": "${azurerm_resource_group.main.location}",
+      "apiVersion": "2019-07-01",
+      "sku": {
+        "name": "Premium_LRS"
+      },
+      "properties": {
+        "creationData": {
+          "createOption": "Empty"
+        },
+        "diskSizeGB": "1024",
+        "maxShares": "3"
+      }
+    }
+  ] 
+}
+TEMPLATE
+}
+
+# get created shared disk
+data "azurerm_managed_disk" "shared_disk" {
+  depends_on = [azurerm_resource_group_template_deployment.shared_disk]
+  name                = "shared_disk"
+  resource_group_name = azurerm_resource_group.main.name
+}

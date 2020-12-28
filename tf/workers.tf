@@ -107,3 +107,24 @@ resource "azurerm_key_vault_access_policy" "worker" {
   certificate_permissions = [
   ]
 }
+
+# existing data disks can't be attached to VMSSs but instead must be attached to the instances, this doesn't work with azurerm_virtual_machine_data_disk_attachment but only via azure CLI for now
+# azure CLI should normally be available as you need to signin to azure via CLI
+resource "null_resource" "attach_shared_disk" {
+  depends_on = [data.azurerm_managed_disk.shared_disk, azurerm_virtual_machine_scale_set.worker]
+
+  provisioner "local-exec" {
+    interpreter = [
+        "powershell.exe",
+        "-Command"
+    ]
+    command = <<EOF
+$instanceIdsString = az vmss list-instances -g ${azurerm_resource_group.main.name} -n ${azurerm_virtual_machine_scale_set.worker.name} --query [].instanceId
+$instanceIds = ConvertFrom-Json $([string]::Join(" ", $instanceIdsString))
+
+foreach ($instanceId in $instanceIds) { 
+    az vmss disk attach --caching none --disk ${data.azurerm_managed_disk.shared_disk.name} --lun 0 --vmss-name ${azurerm_virtual_machine_scale_set.worker.name} --resource-group ${azurerm_resource_group.main.name} --instance-id $instanceId
+}
+EOF
+  }
+}
