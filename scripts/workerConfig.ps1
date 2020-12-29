@@ -64,6 +64,7 @@ if (-not $restart) {
     Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
     choco feature enable -n allowGlobalConfirmation
     choco install --no-progress --limit-output vim
+    choco install --no-progress --limit-output sysinternals
     choco install --no-progress --limit-output openssh -params '"/SSHServerFeature"'
     [DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/sshd_config_wpwd", 5, 10, $null, 'C:\ProgramData\ssh\sshd_config', $false)
     New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force
@@ -203,59 +204,59 @@ else {
 
 if (-not $restart) {
     $commands = {
-        # get all workers to create cluster
-        $workers = New-Object Collections.Generic.List[string]
+        $(
+            # get all workers to create cluster
+            $workers = New-Object Collections.Generic.List[string]
 
-        foreach ($no in 0..20) {
-            $hostname = [string]::Format('worker{0:d6}', $no)
-            try {
-                if (Resolve-DnsName $hostname -QuickTimeout)
-                {
-                    $workers.Add($hostname)
-                }
-            }
-            catch {
-                continue
-            }
-        }
-        
-        if ($env:COMPUTERNAME -eq $workers[0])  # cluster is created from the first worker
-        {
-            Write-Host 'Waiting for all workers to be available before creating cluster'
-            :retry for ($i = 0; $i -lt 10; $i++)
-            {
-                write-host 'Try #' + $i
-                
-                foreach ($worker in $workers) {
-                    if (-not (Test-NetConnection $worker -Port 22).TcpTestSucceeded)
+            foreach ($no in 0..20) {
+                $hostname = [string]::Format('worker{0:d6}', $no)
+                try {
+                    if (Resolve-DnsName $hostname -QuickTimeout)
                     {
-                        Start-Sleep -Seconds 10
-                        continue retry
+                        $workers.Add($hostname)
                     }
                 }
-        
-                break retry
+                catch {
+                    continue
+                }
             }
+            
+            if ($env:COMPUTERNAME -eq $workers[0])  # cluster is created from the first worker
+            {
+                Write-Host 'Waiting for all workers to be available before creating cluster'
+                :retry for ($i = 0; $i -lt 10; $i++)
+                {
+                    write-host 'Try #' + $i
+                    
+                    foreach ($worker in $workers) {
+                        if (-not (Test-NetConnection $worker -Port 22).TcpTestSucceeded)
+                        {
+                            Start-Sleep -Seconds 10
+                            continue retry
+                        }
+                    }
+            
+                    break retry
+                }
 
-            Write-Host 'Creating cluster with shared disk'
-            New-Cluster -Name mycluster -Node $workers.ToArray() -AdministrativeAccessPoint Dns
-            Get-ClusterResource *disk* | Suspend-ClusterResource
+                Write-Host 'Creating cluster with shared disk'
+                New-Cluster -Name mycluster -Node $workers.ToArray() -AdministrativeAccessPoint Dns
+                Get-ClusterResource *disk* | Suspend-ClusterResource
 
-            $sharedDisk = Get-Disk | Where-Object { $_.Location.Contains('LUN 0') }
-            $sharedDisk | Get-Partition | Remove-Partition -Confirm:$false
-            $sharedDisk | New-Partition -UseMaximumSize | Format-Volume -FileSystem NTFS -Confirm:$false -Force
+                $sharedDisk = Get-Disk | Where-Object { $_.Location.Contains('LUN 0') }
+                $sharedDisk | Get-Partition | Remove-Partition -Confirm:$false
+                $sharedDisk | New-Partition -UseMaximumSize | Format-Volume -FileSystem NTFS -Confirm:$false -Force
 
-            Get-ClusterResource *disk* | Resume-ClusterResource
-            Get-ClusterResource *disk* | Add-ClusterSharedVolume
-        }
+                Get-ClusterResource *disk* | Resume-ClusterResource
+                Get-ClusterResource *disk* | Add-ClusterSharedVolume
+            }
+        ) 2>&1 >> c:\scripts\clusterLog.txt
     }
 
     Set-Content -Path "c:\scripts\clusterConfig.ps1" -Value $commands
 
     # create cluster as VM admin to be able to access each worker
-    $secStringPassword = ConvertTo-SecureString $password -AsPlainText -Force
-    $credObject = New-Object System.Management.Automation.PSCredential -ArgumentList @($user, $secStringPassword)
-    Start-Process powershell.exe -NoNewWindow -Wait -LoadUserProfile -Credential $credObject -ArgumentList "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\clusterConfig.ps1'`" 2>&1 >> c:\scripts\clusterLog.txt"
+    psexec -accepteula -h -u "$user" -p "$password" "powershell.exe" -ExecutionPolicy Unrestricted -Command "& 'c:\scripts\clusterConfig.ps1'"
 }
 
 class DownloadWithRetry {
