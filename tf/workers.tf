@@ -51,7 +51,8 @@ resource "azurerm_windows_virtual_machine_scale_set" "worker" {
   }
 
   depends_on = [
-    azurerm_virtual_machine_extension.initMgr1
+    azurerm_virtual_machine_extension.initMgr1,
+    azurerm_resource_group_template_deployment.shared_disk  # dependency so that shared disk is deleted after scale set while deconstruction
   ]
 }
 
@@ -81,8 +82,6 @@ resource "azurerm_key_vault_access_policy" "worker" {
 # existing data disks can't be attached to VMSSs but instead must be attached to the instances, this doesn't work with azurerm_virtual_machine_data_disk_attachment but only via azure CLI for now
 # azure CLI should normally be available as you need to signin to azure via CLI
 resource "null_resource" "attach_shared_disk" {
-  depends_on = [azurerm_resource_group_template_deployment.shared_disk]
-
   provisioner "local-exec" {
     interpreter = [
         "powershell.exe",
