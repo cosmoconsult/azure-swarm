@@ -1,4 +1,15 @@
 terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "=2.36.0"
+    }
+    radomn = {
+      source  = "hashicorp/random"
+      version = "=2.3.0"
+    }
+  }
+
   backend "azurerm" {
     key                  = "terraform.tfstate"
     storage_account_name = "terraformforselfservice"
@@ -7,16 +18,11 @@ terraform {
 }
 
 provider "azurerm" {
-  version = "=2.36.0"
   features {
     key_vault {
       purge_soft_delete_on_destroy = true
     }
   }
-}
-
-provider "random" {
-  version = "=2.3.0"
 }
 
 resource "random_password" "password" {
