@@ -12,6 +12,11 @@ variable "location" {
   default     = "westeurope"
 }
 
+variable "cleanupThresholdGb" {
+  description = "The maximum size in GB for docker images on the worker. If exceeded least recently used images are evicted automatically."
+  default     = "250"
+}
+
 variable "workerVmssSettings" {
   description = "The Azure VM scale set settings for the workers"
   default = {

@@ -53,7 +53,11 @@ param(
 
     [Parameter(Mandatory = $False)]
     [string]
-    $debugScripts
+    $debugScripts,
+
+    [Parameter(Mandatory = $false)]
+    [string]
+    $cleanupThresholdGb = "250"
 )
 
 if ($debugScripts -eq "true") {
@@ -220,7 +224,7 @@ Write-Debug "Download task files"
 [DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1", 5, 10, $null, "c:\scripts\mountAzFileShare.ps1", $false)
 
 Write-Debug "call mgrConfig script"
-& 'c:\scripts\mgrConfig.ps1' -name "$name" -externaldns "$externaldns" -dockerdatapath "$dockerdatapath" -email "$email" -additionalPostScript "$additionalPostScript" -branch "$branch" -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -isFirstMgr:$isFirstMgr -authToken "$authToken" 2>&1 >> c:\scripts\log.txt
+& 'c:\scripts\mgrConfig.ps1' -name "$name" -externaldns "$externaldns" -cleanupThresholdGb $cleanupThresholdGb -dockerdatapath "$dockerdatapath" -email "$email" -additionalPostScript "$additionalPostScript" -branch "$branch" -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -isFirstMgr:$isFirstMgr -authToken "$authToken" 2>&1 >> c:\scripts\log.txt
 
 Write-Debug "set up reboot task"
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\mgrConfig.ps1' -name $name -externaldns '$externaldns' -dockerdatapath '$dockerdatapath' -email '$email' -additionalPostScript '$additionalPostScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -isFirstMgr:`$$isFirstMgr -restart -authToken '$authToken'`" 2>&1 >> c:\scripts\log.txt"

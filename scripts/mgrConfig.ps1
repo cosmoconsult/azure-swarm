@@ -41,7 +41,11 @@ param(
 
     [Parameter(Mandatory = $False)]
     [string]
-    $authToken = $null
+    $authToken = $null,
+
+    [Parameter(Mandatory = $false)]
+    [string]
+    $cleanupThresholdGb = "250"
 )
 
 if (-not $restart) {
@@ -148,14 +152,14 @@ if (-not $restart) {
         Write-Debug "Download script"
         [DownloadWithRetry]::DoDownloadWithRetry($additionalPostScript, 5, 10, $authToken, 'c:\scripts\additionalPostScript.ps1', $false)
         Write-Debug "Call script"
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr -authToken "$authToken"
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr -cleanupThresholdGb $cleanupThresholdGb -authToken "$authToken"
     }
 }
 else {
     # Handle additional script
     if ($additionalPostScript -ne "") {
         Write-Debug "Call script"
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr -authToken "$authToken" -restart 
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -externaldns "$externaldns" -cleanupThresholdGb $cleanupThresholdGb -isFirstMgr:$isFirstMgr -authToken "$authToken" -restart 
     }
 }
 
