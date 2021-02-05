@@ -101,7 +101,8 @@ resource "azurerm_key_vault_access_policy" "worker" {
   ]
 
   secret_permissions = [
-    "Get"
+    "Get",
+    "List"
   ]
 
   certificate_permissions = [

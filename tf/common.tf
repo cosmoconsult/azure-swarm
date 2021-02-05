@@ -117,3 +117,10 @@ resource "azurerm_key_vault_secret" "sshPubKey" {
   value        = file(pathexpand("~/.ssh/id_rsa.pub"))
   key_vault_id = azurerm_key_vault.main.id
 }
+
+resource "azurerm_key_vault_secret" "rabbitmq-password" {
+  count        = var.rabbitMqPassword == null ? 0 : 1
+  name         = "Services--RabbitMq--Password"
+  value        = var.rabbitMqPassword
+  key_vault_id = azurerm_key_vault.main.id
+}

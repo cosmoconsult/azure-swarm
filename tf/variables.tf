@@ -111,3 +111,8 @@ variable "debugScripts" {
   description = "defines whether the called PowerShell scripts show debug output"
   default     = "false"
 }
+
+variable "rabbitMqPassword" {
+  description = "The password for connecting to RabbitMQ"
+  default     = null
+}

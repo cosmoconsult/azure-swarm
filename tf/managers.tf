@@ -307,7 +307,8 @@ resource "azurerm_key_vault_access_policy" "mgr2" {
   ]
 
   secret_permissions = [
-    "Get"
+    "Get",
+    "List"
   ]
 
   certificate_permissions = [
@@ -324,7 +325,8 @@ resource "azurerm_key_vault_access_policy" "mgr3" {
   ]
 
   secret_permissions = [
-    "Get"
+    "Get",
+    "List"
   ]
 
   certificate_permissions = [
