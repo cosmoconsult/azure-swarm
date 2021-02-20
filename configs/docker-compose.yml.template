@@ -39,7 +39,7 @@ services:
       - traefik-public
 
   agent:
-    image: portainer/agent:2.1.1
+    image: portainer/agent:2.1.0
     environment:
       AGENT_CLUSTER_ADDR: tasks.agent
     volumes:
