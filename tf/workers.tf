@@ -71,6 +71,23 @@ resource "azurerm_virtual_machine_scale_set" "worker" {
     })
   }
 
+  extension {
+    name                       = "monitorMgr1"
+    publisher                  = "Microsoft.EnterpriseCloud.Monitoring"
+    type                       = "MicrosoftMonitoringAgent"
+    type_handler_version       = "1.0"
+    auto_upgrade_minor_version = true
+
+    settings = jsonencode({
+      "workspaceId" = azurerm_log_analytics_workspace.log.workspace_id
+    })
+
+    protected_settings = jsonencode({
+      "workspaceKey" = azurerm_log_analytics_workspace.log.primary_shared_key
+    })
+
+  }
+
   os_profile_windows_config {
     enable_automatic_upgrades = false
     provision_vm_agent        = true

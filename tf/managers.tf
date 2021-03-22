@@ -150,6 +150,25 @@ resource "azurerm_virtual_machine_extension" "initMgr1" {
 
 }
 
+resource "azurerm_virtual_machine_extension" "monitorMgr1" {
+  name                       = "monitorMgr1"
+  virtual_machine_id         = azurerm_windows_virtual_machine.mgr1.id
+  publisher                  = "Microsoft.EnterpriseCloud.Monitoring"
+  type                       = "MicrosoftMonitoringAgent"
+  type_handler_version       = "1.0"
+  auto_upgrade_minor_version = true
+  depends_on = [
+  ]
+
+  settings = jsonencode({
+    "workspaceId" = azurerm_log_analytics_workspace.log.workspace_id
+  })
+
+  protected_settings = jsonencode({
+    "workspaceKey" = azurerm_log_analytics_workspace.log.primary_shared_key
+  })
+}
+
 resource "azurerm_windows_virtual_machine" "mgr2" {
   count                    = var.managerVmSettings.useThree ? 1 : 0
   name                     = "${local.name}-mgr2-vm"
