@@ -272,6 +272,26 @@ resource "azurerm_virtual_machine_extension" "initMgr2" {
 
 }
 
+resource "azurerm_virtual_machine_extension" "monitorMgr2" {
+  count                      = var.managerVmSettings.useThree ? 1 : 0
+  name                       = "monitorMgr2"
+  virtual_machine_id         = azurerm_windows_virtual_machine.mgr2.0.id
+  publisher                  = "Microsoft.EnterpriseCloud.Monitoring"
+  type                       = "MicrosoftMonitoringAgent"
+  type_handler_version       = "1.0"
+  auto_upgrade_minor_version = true
+  depends_on = [
+  ]
+
+  settings = jsonencode({
+    "workspaceId" = azurerm_log_analytics_workspace.log.workspace_id
+  })
+
+  protected_settings = jsonencode({
+    "workspaceKey" = azurerm_log_analytics_workspace.log.primary_shared_key
+  })
+}
+
 resource "azurerm_virtual_machine_extension" "initMgr3" {
   count                      = var.managerVmSettings.useThree ? 1 : 0
   name                       = "initMgr3"
@@ -295,6 +315,26 @@ resource "azurerm_virtual_machine_extension" "initMgr3" {
     "commandToExecute" : "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${local.name}.${var.location}.cloudapp.azure.com\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalPreScript \"${var.additionalPreScriptMgr}\" -additionalPostScript \"${var.additionalPostScriptMgr}\" -dockerdatapath \"${var.dockerdatapath}\" -name \"${local.name}\" -storageAccountName \"${azurerm_storage_account.main.name}\" -storageAccountKey \"${azurerm_storage_account.main.primary_access_key}\" -adminPwd \"${random_password.password.result}\" -authToken \"${var.authHeaderValue}\" -debugScripts \"${var.debugScripts}\""
   })
 
+}
+
+resource "azurerm_virtual_machine_extension" "monitorMgr3" {
+  count                      = var.managerVmSettings.useThree ? 1 : 0
+  name                       = "monitorMgr3"
+  virtual_machine_id         = azurerm_windows_virtual_machine.mgr3.0.id
+  publisher                  = "Microsoft.EnterpriseCloud.Monitoring"
+  type                       = "MicrosoftMonitoringAgent"
+  type_handler_version       = "1.0"
+  auto_upgrade_minor_version = true
+  depends_on = [
+  ]
+
+  settings = jsonencode({
+    "workspaceId" = azurerm_log_analytics_workspace.log.workspace_id
+  })
+
+  protected_settings = jsonencode({
+    "workspaceKey" = azurerm_log_analytics_workspace.log.primary_shared_key
+  })
 }
 
 resource "azurerm_key_vault_access_policy" "mgr1" {

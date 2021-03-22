@@ -82,7 +82,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert" "diskBelow25" {
   time_window    = 15
   trigger {
     operator  = "GreaterThan"
-    threshold = 1
+    threshold = 0
   }
 }
 
@@ -110,7 +110,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert" "diskBelow10" {
   time_window    = 15
   trigger {
     operator  = "GreaterThan"
-    threshold = 1
+    threshold = 0
   }
 }
 
@@ -138,6 +138,6 @@ resource "azurerm_monitor_scheduled_query_rules_alert" "diskBelow5" {
   time_window    = 15
   trigger {
     operator  = "GreaterThan"
-    threshold = 1
+    threshold = 0
   }
 }
