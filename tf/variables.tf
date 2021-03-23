@@ -112,6 +112,26 @@ variable "debugScripts" {
   default     = "false"
 }
 
+variable "rabbitMqVhost" {
+  description = "The virtual host for connecting to RabbitMQ"
+  default     = null
+}
+
+variable "rabbitMqUserExtension" {
+  description = "The username for connecting to RabbitMQ from the VS Code Extension"
+  default     = null
+}
+
+variable "rabbitMqPasswordExtension" {
+  description = "The password for connecting to RabbitMQ from the VS Code Extension"
+  default     = null
+}
+
+variable "rabbitMqUser" {
+  description = "The username for connecting to RabbitMQ"
+  default     = null
+}
+
 variable "rabbitMqPassword" {
   description = "The password for connecting to RabbitMQ"
   default     = null
