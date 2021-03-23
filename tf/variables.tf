@@ -116,3 +116,8 @@ variable "rabbitMqPassword" {
   description = "The password for connecting to RabbitMQ"
   default     = null
 }
+
+variable "authValidDomains" {
+  description = "Comma-separated string of valid domains allowed to authenticate against services within the swarm"
+  default     = null
+}

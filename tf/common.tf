@@ -124,3 +124,10 @@ resource "azurerm_key_vault_secret" "rabbitmq-password" {
   value        = var.rabbitMqPassword
   key_vault_id = azurerm_key_vault.main.id
 }
+
+resource "azurerm_key_vault_secret" "auth-valid-domains" {
+  count        = var.authValidDomains == null ? 0 : 1
+  name         = "ValidDomains"
+  value        = var.authValidDomains
+  key_vault_id = azurerm_key_vault.main.id
+}
