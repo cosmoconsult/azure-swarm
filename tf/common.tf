@@ -118,6 +118,34 @@ resource "azurerm_key_vault_secret" "sshPubKey" {
   key_vault_id = azurerm_key_vault.main.id
 }
 
+resource "azurerm_key_vault_secret" "rabbitmq-vhost" {
+  count        = var.rabbitMqVhost == null ? 0 : 1
+  name         = "Services--RabbitMq--VirtualHost"
+  value        = var.rabbitMqVhost
+  key_vault_id = azurerm_key_vault.main.id
+}
+
+resource "azurerm_key_vault_secret" "rabbitmq-user-extension" {
+  count        = var.rabbitMqUserExtension == null ? 0 : 1
+  name         = "rabbitmq-vscode-user"
+  value        = var.rabbitMqUserExtension
+  key_vault_id = azurerm_key_vault.main.id
+}
+
+resource "azurerm_key_vault_secret" "rabbitmq-password-extension" {
+  count        = var.rabbitMqPasswordExtension == null ? 0 : 1
+  name         = "rabbitmq-vscode-password"
+  value        = var.rabbitMqPasswordExtension
+  key_vault_id = azurerm_key_vault.main.id
+}
+
+resource "azurerm_key_vault_secret" "rabbitmq-user" {
+  count        = var.rabbitMqUser == null ? 0 : 1
+  name         = "Services--RabbitMq--Username"
+  value        = var.rabbitMqUser
+  key_vault_id = azurerm_key_vault.main.id
+}
+
 resource "azurerm_key_vault_secret" "rabbitmq-password" {
   count        = var.rabbitMqPassword == null ? 0 : 1
   name         = "Services--RabbitMq--Password"
