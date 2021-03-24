@@ -145,7 +145,7 @@ resource "azurerm_virtual_machine_extension" "initMgr1" {
   })
 
   protected_settings = jsonencode({
-    "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${local.name}.${var.location}.cloudapp.azure.com\" -cleanupThresholdGb \"${var.cleanupThresholdGb}\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalPreScript \"${var.additionalPreScriptMgr}\" -additionalPostScript \"${var.additionalPostScriptMgr}\" -dockerdatapath \"${var.dockerdatapath}\" -name \"${local.name}\" -storageAccountName \"${azurerm_storage_account.main.name}\" -storageAccountKey \"${azurerm_storage_account.main.primary_access_key}\" -adminPwd \"${random_password.password.result}\" -isFirstmgr -authToken \"${var.authHeaderValue}\" -debugScripts \"${var.debugScripts}\""
+    "commandToExecute" = "powershell -ExecutionPolicy Unrestricted -File mgrInitSwarmAndSetupTasks.ps1 -externaldns \"${local.name}.${var.location}.cloudapp.azure.com\" -cleanupThresholdGb \"${var.cleanupThresholdGb}\" -cosmoInternal \"${var.cosmoInternal}\" -email \"${var.eMail}\" -branch \"${var.branch}\" -additionalPreScript \"${var.additionalPreScriptMgr}\" -additionalPostScript \"${var.additionalPostScriptMgr}\" -dockerdatapath \"${var.dockerdatapath}\" -name \"${local.name}\" -storageAccountName \"${azurerm_storage_account.main.name}\" -storageAccountKey \"${azurerm_storage_account.main.primary_access_key}\" -adminPwd \"${random_password.password.result}\" -isFirstmgr -authToken \"${var.authHeaderValue}\" -debugScripts \"${var.debugScripts}\""
   })
 
 }
