@@ -392,6 +392,60 @@ resource "azurerm_key_vault_access_policy" "mgr3" {
   ]
 }
 
+resource "azurerm_key_vault_access_policy" "mgr1-cosmo-kv" {
+  count        = var.cosmoInternal == "true" ? 1 : 0
+  key_vault_id = var.syncKeyVault
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_windows_virtual_machine.mgr1.identity.0.principal_id
+
+  key_permissions = [
+  ]
+
+  secret_permissions = [
+    "Get",
+    "List"
+  ]
+
+  certificate_permissions = [
+  ]
+}
+
+resource "azurerm_key_vault_access_policy" "mgr2-cosmo-kv" {
+  count        = var.managerVmSettings.useThree && var.cosmoInternal == "true" ? 1 : 0
+  key_vault_id = var.syncKeyVault
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_windows_virtual_machine.mgr2.0.identity.0.principal_id
+
+  key_permissions = [
+  ]
+
+  secret_permissions = [
+    "Get",
+    "List"
+  ]
+
+  certificate_permissions = [
+  ]
+}
+
+resource "azurerm_key_vault_access_policy" "mgr3-cosmo-kv" {
+  count        = var.managerVmSettings.useThree && var.cosmoInternal == "true" ? 1 : 0
+  key_vault_id = var.syncKeyVault
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_windows_virtual_machine.mgr3.0.identity.0.principal_id
+
+  key_permissions = [
+  ]
+
+  secret_permissions = [
+    "Get",
+    "List"
+  ]
+
+  certificate_permissions = [
+  ]
+}
+
 resource "azurerm_managed_disk" "datadisk1" {
   name                 = "${local.name}-mgr1-datadisk"
   location             = azurerm_resource_group.main.location
