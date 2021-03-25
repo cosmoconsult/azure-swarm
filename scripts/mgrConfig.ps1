@@ -45,7 +45,11 @@ param(
 
     [Parameter(Mandatory = $false)]
     [string]
-    $cleanupThresholdGb = "250"
+    $cleanupThresholdGb = "250",
+
+    [Parameter(Mandatory = $True)]
+    [string]
+    $cosmoInternal
 )
 
 if (-not $restart) {
@@ -152,14 +156,14 @@ if (-not $restart) {
         Write-Debug "Download script"
         [DownloadWithRetry]::DoDownloadWithRetry($additionalPostScript, 5, 10, $authToken, 'c:\scripts\additionalPostScript.ps1', $false)
         Write-Debug "Call script"
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -name "$name" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr -cleanupThresholdGb $cleanupThresholdGb -authToken "$authToken"
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -name "$name" -externaldns "$externaldns" -isFirstMgr:$isFirstMgr -cleanupThresholdGb $cleanupThresholdGb -authToken "$authToken" -cosmoInternal "$cosmoInternal" 
     }
 }
 else {
     # Handle additional script
     if ($additionalPostScript -ne "") {
         Write-Debug "Call script"
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -name "$name" -externaldns "$externaldns" -cleanupThresholdGb $cleanupThresholdGb -isFirstMgr:$isFirstMgr -authToken "$authToken" -restart 
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -name "$name" -externaldns "$externaldns" -cleanupThresholdGb $cleanupThresholdGb -isFirstMgr:$isFirstMgr -authToken "$authToken" -cosmoInternal "$cosmoInternal" -restart 
     }
 }
 

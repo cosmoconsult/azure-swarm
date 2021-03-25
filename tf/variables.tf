@@ -17,6 +17,11 @@ variable "cleanupThresholdGb" {
   default     = "250"
 }
 
+variable "cosmoInternal" {
+  description = "Configures whether this is a COSMO internal environment or not"
+  default     = "true"
+}
+
 variable "workerVmssSettings" {
   description = "The Azure VM scale set settings for the workers"
   default = {
