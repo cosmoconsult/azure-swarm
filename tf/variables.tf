@@ -141,3 +141,8 @@ variable "authValidDomains" {
   description = "Comma-separated string of valid domains allowed to authenticate against services within the swarm"
   default     = null
 }
+
+variable "syncKeyVault" {
+  description = "ID of the key vault to sync"
+  default     = "/subscriptions/1e79199c-e5f9-4e36-a1fe-0754d703c218/resourceGroups/PPI-Config-Secrets-Share/providers/Microsoft.KeyVault/vaults/cc-ppi"
+}
