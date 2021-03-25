@@ -73,7 +73,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert" "diskBelow25" {
   enabled        = true
   query          = <<-QUERY
   Perf
-    | where ObjectName == "LogicalDisk" and CounterName == "% Free Space" and InstanceName  != "_Total"
+    | where ObjectName == "LogicalDisk" and CounterName == "% Free Space" and InstanceName  != "_Total" and InstanceName  != "D:"
     | where CounterValue <= 25 and CounterValue > 10
     | summarize arg_max(TimeGenerated, *) by Computer, InstanceName
   QUERY
@@ -101,7 +101,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert" "diskBelow10" {
   enabled        = true
   query          = <<-QUERY
   Perf
-    | where ObjectName == "LogicalDisk" and CounterName == "% Free Space" and InstanceName  != "_Total"
+    | where ObjectName == "LogicalDisk" and CounterName == "% Free Space" and InstanceName  != "_Total" and InstanceName  != "D:"
     | where CounterValue <= 10 and CounterValue > 5
     | summarize arg_max(TimeGenerated, *) by Computer, InstanceName
   QUERY
@@ -129,7 +129,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert" "diskBelow5" {
   enabled        = true
   query          = <<-QUERY
   Perf
-    | where ObjectName == "LogicalDisk" and CounterName == "% Free Space" and InstanceName  != "_Total"
+    | where ObjectName == "LogicalDisk" and CounterName == "% Free Space" and InstanceName  != "_Total" and InstanceName  != "D:"
     | where CounterValue <= 5
     | summarize arg_max(TimeGenerated, *) by Computer, InstanceName
   QUERY
