@@ -159,3 +159,10 @@ resource "azurerm_key_vault_secret" "auth-valid-domains" {
   value        = var.authValidDomains
   key_vault_id = azurerm_key_vault.main.id
 }
+
+resource "azurerm_key_vault_secret" "appinsights-key" {
+  count        = var.dockerAutomationAppInsightsKey == null ? 0 : 1
+  name         = "ApplicationInsights--InstrumentationKey"
+  value        = var.dockerAutomationAppInsightsKey
+  key_vault_id = azurerm_key_vault.main.id
+}
