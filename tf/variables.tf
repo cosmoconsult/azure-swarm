@@ -152,7 +152,17 @@ variable "authValidDomains" {
   default     = null
 }
 
-variable "syncKeyVault" {
-  description = "ID of the key vault to sync"
-  default     = "/subscriptions/1e79199c-e5f9-4e36-a1fe-0754d703c218/resourceGroups/PPI-Config-Secrets-Share/providers/Microsoft.KeyVault/vaults/cc-ppi"
+variable "syncKeyVaultSubscription" {
+  description = "ID of the subscription with the key vault to sync"
+  default     = "1e79199c-e5f9-4e36-a1fe-0754d703c218"
+}
+
+variable "syncKeyVaultResourceGroup" {
+  description = "Name of the resource group with key vault to sync"
+  default     = "PPI-Config-Secrets-Share"
+}
+
+variable "syncKeyVaultName" {
+  description = "Name of the key vault to sync"
+  default     = "cc-ppi"
 }

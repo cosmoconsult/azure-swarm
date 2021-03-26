@@ -392,8 +392,14 @@ resource "azurerm_key_vault_access_policy" "mgr3" {
   ]
 }
 
+data "azurerm_key_vault" "sync_kv" {
+  provider            = azurerm.azurerm_sync_kv
+  name                = var.syncKeyVaultName
+  resource_group_name = var.syncKeyVaultResourceGroup
+
 resource "azurerm_key_vault_access_policy" "mgr1-cosmo-kv" {
-  key_vault_id = var.syncKeyVault
+  provider     = azurerm.azurerm_sync_kv
+  key_vault_id = data.azurerm_key_vault.sync_kv.id
   tenant_id    = data.azurerm_client_config.current.tenant_id
   object_id    = azurerm_windows_virtual_machine.mgr1.identity.0.principal_id
 
@@ -410,8 +416,9 @@ resource "azurerm_key_vault_access_policy" "mgr1-cosmo-kv" {
 }
 
 resource "azurerm_key_vault_access_policy" "mgr2-cosmo-kv" {
+  provider     = azurerm.azurerm_sync_kv
   count        = var.managerVmSettings.useThree ? 1 : 0
-  key_vault_id = var.syncKeyVault
+  key_vault_id = data.azurerm_key_vault.sync_kv.id
   tenant_id    = data.azurerm_client_config.current.tenant_id
   object_id    = azurerm_windows_virtual_machine.mgr2.0.identity.0.principal_id
 
@@ -428,8 +435,9 @@ resource "azurerm_key_vault_access_policy" "mgr2-cosmo-kv" {
 }
 
 resource "azurerm_key_vault_access_policy" "mgr3-cosmo-kv" {
+  provider     = azurerm.azurerm_sync_kv
   count        = var.managerVmSettings.useThree ? 1 : 0
-  key_vault_id = var.syncKeyVault
+  key_vault_id = data.azurerm_key_vault.sync_kv.id
   tenant_id    = data.azurerm_client_config.current.tenant_id
   object_id    = azurerm_windows_virtual_machine.mgr3.0.identity.0.principal_id
 
