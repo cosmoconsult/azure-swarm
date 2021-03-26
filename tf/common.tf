@@ -25,6 +25,13 @@ provider "azurerm" {
   }
 }
 
+provider "azurerm" {
+  features {
+  }
+  subscription_id = var.syncKeyVaultSubscription
+  alias           = "azurerm_sync_kv"
+}
+
 resource "random_password" "password" {
   length           = 16
   special          = true
