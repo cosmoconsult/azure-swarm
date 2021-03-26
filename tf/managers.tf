@@ -396,6 +396,7 @@ data "azurerm_key_vault" "sync_kv" {
   provider            = azurerm.azurerm_sync_kv
   name                = var.syncKeyVaultName
   resource_group_name = var.syncKeyVaultResourceGroup
+}
 
 resource "azurerm_key_vault_access_policy" "mgr1-cosmo-kv" {
   provider     = azurerm.azurerm_sync_kv
