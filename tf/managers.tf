@@ -349,7 +349,8 @@ resource "azurerm_key_vault_access_policy" "mgr1" {
     "Get",
     "List",
     "Set",
-    "Delete"
+    "Delete",
+    "Purge"
   ]
 
   certificate_permissions = [
@@ -368,7 +369,9 @@ resource "azurerm_key_vault_access_policy" "mgr2" {
   secret_permissions = [
     "Get",
     "List",
-    "Set"
+    "Set",
+    "Delete",
+    "Purge"
   ]
 
   certificate_permissions = [
@@ -387,7 +390,9 @@ resource "azurerm_key_vault_access_policy" "mgr3" {
   secret_permissions = [
     "Get",
     "List",
-    "Set"
+    "Set",
+    "Delete",
+    "Purge"
   ]
 
   certificate_permissions = [
