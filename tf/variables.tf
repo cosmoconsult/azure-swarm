@@ -147,8 +147,8 @@ variable "dockerAutomationAppInsightsKey" {
   default     = "5d632878-a47b-440e-9ec3-2dd8a212fd3c"
 }
 
-variable "authValidDomains" {
-  description = "Comma-separated string of valid domains allowed to authenticate against services within the swarm"
+variable "authValidTenants" {
+  description = "Comma-separated string of valid tenant ids allowed to authenticate against services within the swarm"
   default     = null
 }
 
