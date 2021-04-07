@@ -134,14 +134,14 @@ resource "azurerm_key_vault_secret" "rabbitmq-vhost" {
 
 resource "azurerm_key_vault_secret" "rabbitmq-user-extension" {
   count        = var.rabbitMqUserExtension == null ? 0 : 1
-  name         = "rabbitmq-vscode-user"
+  name         = "Services--RabbitMq--VsCodeUser"
   value        = var.rabbitMqUserExtension
   key_vault_id = azurerm_key_vault.main.id
 }
 
 resource "azurerm_key_vault_secret" "rabbitmq-password-extension" {
   count        = var.rabbitMqPasswordExtension == null ? 0 : 1
-  name         = "rabbitmq-vscode-password"
+  name         = "Services--RabbitMq--VsCodePassword"
   value        = var.rabbitMqPasswordExtension
   key_vault_id = azurerm_key_vault.main.id
 }
