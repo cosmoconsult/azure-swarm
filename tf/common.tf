@@ -11,9 +11,7 @@ terraform {
   }
 
   backend "azurerm" {
-    key                  = "terraform.tfstate"
-    storage_account_name = "terraformforselfservice"
-    resource_group_name  = "PPI-Config-Secrets-Share"
+    key = "terraform.tfstate"
   }
 }
 
