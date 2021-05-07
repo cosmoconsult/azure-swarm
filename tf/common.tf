@@ -159,6 +159,13 @@ resource "azurerm_key_vault_secret" "rabbitmq-password" {
   key_vault_id = azurerm_key_vault.main.id
 }
 
+resource "azurerm_key_vault_secret" "swarm-entity" {
+  count        = var.swarmEntity == null ? 0 : 1
+  name         = "swarm-entity"
+  value        = var.swarmEntity
+  key_vault_id = azurerm_key_vault.main.id
+}
+
 resource "azurerm_key_vault_secret" "auth-valid-tenants" {
   count        = var.authValidTenants == null ? 0 : 1
   name         = "ValidTenants"

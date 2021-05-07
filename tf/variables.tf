@@ -142,6 +142,11 @@ variable "rabbitMqPassword" {
   default     = null
 }
 
+variable "swarmEntity" {
+  description = "The entity the swarm belongs to"
+  default     = null
+}
+
 variable "dockerAutomationAppInsightsKey" {
   description = "The application insights key to use for docker-automation"
   default     = "5d632878-a47b-440e-9ec3-2dd8a212fd3c"
