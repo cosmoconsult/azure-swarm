@@ -1,0 +1,221 @@
+version: "3.7"
+
+services:
+  azdevops-automation-current:
+    image: cosmoconsult/azdevops-automation:0.11.22
+    volumes:
+      - source: '\\.\pipe\rancher_wins'
+        target: '\\.\pipe\rancher_wins'
+        type: npipe
+      - source: C:\wins
+        target: C:\wins
+        type: bind
+    environment:
+      - SERVICES__KeyVaultUrl=https://${SWARM_NAME}-vault.vault.azure.net
+      - CosmoProduction=true
+      - CosmoInternal=${COSMO_INTERNAL}
+    networks:
+      - azdevops-automation-network-current
+      - traefik-public
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.azdevops-automation-current.rule=Host(`${EXTERNAL_DNS}`) && (PathPrefix(`/automation/0.11`) || PathPrefix(`/automation/latest`))
+        - traefik.http.middlewares.azdevops-automation-current.stripprefix.prefixes=/automation/0.11,/automation/latest
+        - traefik.http.routers.azdevops-automation-current.entrypoints=websecure
+        - traefik.http.routers.azdevops-automation-current.tls.certresolver=myresolver
+        - traefik.http.routers.azdevops-automation-current.middlewares=azdevops-automation-current@docker
+        - traefik.http.services.azdevops-automation-current.loadBalancer.server.scheme=http
+        - traefik.http.services.azdevops-automation-current.loadBalancer.server.port=5000
+      update_config:
+        order: start-first
+
+  core-current:
+    image: cosmoconsult/docker-automation:0.11.15
+    volumes:
+      - type: npipe
+        source: \\.\pipe\docker_engine
+        target: \\.\pipe\docker_engine
+      - source: '\\.\pipe\rancher_wins'
+        target: '\\.\pipe\rancher_wins'
+        type: npipe
+      - source: C:\wins
+        target: C:\wins
+        type: bind
+      - source: s:\
+        target: c:\azurefileshare
+        type: bind
+    environment:
+      - SERVICES__KeyVaultUrl=https://${SWARM_NAME}-vault.vault.azure.net
+      - publicdnsname=${EXTERNAL_DNS}
+      - CosmoProduction=true
+      - CosmoInternal=${COSMO_INTERNAL}
+    networks:
+      - docker-automation-network-current
+      - traefik-public
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.core-current.rule=Host(`${EXTERNAL_DNS}`) && PathPrefix(`/docker/0.11`)
+        - traefik.http.middlewares.core-current.stripprefix.prefixes=/docker/0.11
+        - traefik.http.routers.core-current.entrypoints=websecure
+        - traefik.http.routers.core-current.tls.certresolver=myresolver
+        - traefik.http.routers.core-current.middlewares=core-current@docker
+        - traefik.http.services.core-current.loadBalancer.server.scheme=http
+        - traefik.http.services.core-current.loadBalancer.server.port=5100
+      update_config:
+        order: start-first
+    secrets:
+      - source: adminPwd
+        target: "c:/secrets/adminPwd"
+
+  agent-current:
+    image: cosmoconsult/docker-automation-agent:0.11.15
+    volumes:
+      - source: '\\.\pipe\docker_engine'
+        target: '\\.\pipe\docker_engine'
+        type: npipe
+      - source: '\\.\pipe\rancher_wins'
+        target: '\\.\pipe\rancher_wins'
+        type: npipe
+      - source: C:\wins
+        target: C:\wins
+        type: bind
+      - source: c:\programdata\bccontainerhelper
+        target: c:\programdata\bccontainerhelper
+        type: bind
+      - source: f:\bcartifacts.cache
+        target: c:\bcartifacts.cache
+        type: bind
+      - source: s:\
+        target: c:\azurefileshare
+        type: bind
+    environment:
+      - SERVICES__KeyVaultUrl=https://${SWARM_NAME}-vault.vault.azure.net
+      - CosmoProduction=true
+      - CosmoInternal=${COSMO_INTERNAL}
+    networks:
+      - docker-automation-network-current
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.platform.os == windows
+          - node.role != manager
+      update_config:
+        order: start-first
+
+  core-previous:
+    image: tobiasfenster/docker-automation:0.10.5-1809
+    isolation: hyperv
+    volumes:
+      - type: npipe
+        source: \\.\pipe\docker_engine
+        target: \\.\pipe\docker_engine
+      - source: '\\.\pipe\rancher_wins'
+        target: '\\.\pipe\rancher_wins'
+        type: npipe
+      - source: C:\wins
+        target: C:\wins
+        type: bind
+    environment:
+      - publicdnsname=${EXTERNAL_DNS}
+      - SERVICES__KeyVaultUrl=https://${SWARM_NAME}-vault.vault.azure.net
+      - CosmoInternal=${COSMO_INTERNAL}
+    networks:
+      - docker-automation-network-previous
+      - traefik-public
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      update_config:
+        order: start-first
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.core-previous.rule=Host(`${EXTERNAL_DNS}`) && PathPrefix(`/docker/0.10`)
+        - traefik.http.middlewares.core-previous.stripprefix.prefixes=/docker/0.10
+        - traefik.http.routers.core-previous.entrypoints=websecure
+        - traefik.http.routers.core-previous.tls.certresolver=myresolver
+        - traefik.http.routers.core-previous.middlewares=core-previous@docker
+        - traefik.http.services.core-previous.loadBalancer.server.scheme=http
+        - traefik.http.services.core-previous.loadBalancer.server.port=5100
+    secrets:
+      - source: adminPwd
+        target: "c:/secrets/adminPwd"
+
+  agent-previous:
+    image: tobiasfenster/docker-automation-agent:0.10.5-1809
+    isolation: hyperv
+    volumes:
+      - source: '\\.\pipe\docker_engine'
+        target: '\\.\pipe\docker_engine'
+        type: npipe
+      - source: '\\.\pipe\rancher_wins'
+        target: '\\.\pipe\rancher_wins'
+        type: npipe
+      - source: C:\wins
+        target: C:\wins
+        type: bind
+      - source: c:\programdata\navcontainerhelper
+        target: c:\programdata\navcontainerhelper
+        type: bind
+      - source: f:\bcartifacts.cache
+        target: c:\bcartifacts.cache
+        type: bind
+    environment:
+      - SERVICES__KeyVaultUrl=https://${SWARM_NAME}-vault.vault.azure.net
+      - CosmoInternal=${COSMO_INTERNAL}
+    networks:
+      - docker-automation-network-previous
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.platform.os == windows
+          - node.role != manager
+      update_config:
+        order: start-first
+
+  docuum:
+    # TODO: replace with official image as soon as https://github.com/stepchowfun/docuum/pull/136 is merged
+    image: lippertmarkus/docuum:latest
+    isolation: hyperv
+    command: -t "${CLEANUP_THRESHOLD_GB} GB"
+    init: true
+    volumes:
+      - source: '\\.\pipe\docker_engine'
+        target: '\\.\pipe\docker_engine'
+        type: npipe
+      - source: docuum
+        target: 'C:\Users\ContainerAdministrator\AppData\Local\docuum'
+        type: volume
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.platform.os == windows
+          - node.role != manager
+
+networks:
+  docker-automation-network-current:
+    attachable: true
+  docker-automation-network-previous:
+    attachable: true
+  azdevops-automation-network-current:
+    attachable: true
+  traefik-public:
+    external: true
+
+secrets:
+  adminPwd:
+    external: true
+
+volumes:
+  docuum:
