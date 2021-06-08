@@ -58,34 +58,6 @@ resource "azurerm_monitor_action_group" "main" {
   }
 }
 
-resource "azurerm_monitor_scheduled_query_rules_alert" "diskBelow25" {
-  name                = "${local.name}-diskBelow25"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-
-  action {
-    action_group = [
-      azurerm_monitor_action_group.main.id
-    ]
-  }
-  data_source_id = azurerm_log_analytics_workspace.log.id
-  description    = "Alert when disk free space is below 25%"
-  enabled        = true
-  query          = <<-QUERY
-  Perf
-    | where ObjectName == "LogicalDisk" and CounterName == "% Free Space" and InstanceName  != "_Total" and InstanceName  != "D:"
-    | where CounterValue <= 25 and CounterValue > 10
-    | summarize arg_max(TimeGenerated, *) by Computer, InstanceName
-  QUERY
-  severity       = 2
-  frequency      = 15
-  time_window    = 15
-  trigger {
-    operator  = "GreaterThan"
-    threshold = 0
-  }
-}
-
 resource "azurerm_monitor_scheduled_query_rules_alert" "diskBelow10" {
   name                = "${local.name}-diskBelow10"
   location            = azurerm_resource_group.main.location
