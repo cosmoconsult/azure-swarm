@@ -39,7 +39,7 @@ services:
       - traefik-public
 
   agent:
-    image: portainer/agent:2.5.1
+    image: portainer/agent:2.6.0
     environment:
       AGENT_CLUSTER_ADDR: tasks.agent
     volumes:
@@ -58,7 +58,7 @@ services:
           - node.platform.os == windows
 
   portainer:
-    image: portainer/portainer-ce:2.5.1
+    image: portainer/portainer-ce:2.6.0
     command: -H tcp://tasks.agent:9001 --tlsskipverify --admin-password-file 'c:\\secrets\\adminPwd'
     volumes:
       - s:/portainer-data:c:/data
