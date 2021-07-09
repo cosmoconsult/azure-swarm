@@ -32,52 +32,57 @@ param(
     $authToken = $null
 )
 
-if (-not $restart) {
-    # initial
-    [DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1", 5, 10, $null, "c:\scripts\mountAzFileShare.ps1", $false)
-
-    $tries = 1
-    while ($tries -le 10) { 
-        Write-Host "Trying to mount Azure File Share"
-        . c:\scripts\mountAzFileShare.ps1 -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -driveLetter "S"
-        if (Test-Path "S:") {
-            $tries = 11
-        }
-        Write-Host "Try $tries failed"
-        $tries = $tries + 1
-        Start-Sleep -Seconds 30
+if ($restart) {
+    # Handle additional script
+    if ($additionalPostScript -ne "") {
+        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -authToken "$authToken" -restart 
     }
 
-    # Setup profile
-    Write-Debug "Download profile file"
-    [DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/profile.ps1", 5, 10, $null, $PROFILE.AllUsersAllHosts, $false)
-
-    # Choco and SSH
-    Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-    choco feature enable -n allowGlobalConfirmation
-    choco install --no-progress --limit-output vim
-    choco install --no-progress --limit-output openssh -params '"/SSHServerFeature"'
-    [DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/sshd_config_wpwd", 5, 10, $null, 'C:\ProgramData\ssh\sshd_config', $false)
-    New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force
-    Restart-Service sshd
-
-    # Swarm setup
-    New-NetFirewallRule -DisplayName "Allow Swarm TCP" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 2377, 7946 | Out-Null
-    New-NetFirewallRule -DisplayName "Allow Swarm UDP" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 4789, 7946 | Out-Null
-
-    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\workerConfig.ps1' -name $name -images '$images' -additionalPostScript '$additionalPostScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -authToken '$authToken' -restart`" 2>&1 >> c:\scripts\log.txt"
-    $trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
-    $principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-    Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "WorkerConfigReboot" -Description "This task should configure the worker after a reboot"
+    # stop execution
+    return; 
 }
-else {
-    Invoke-Expression "docker swarm leave"
+
+
+# initial
+[DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/mountAzFileShare.ps1", 5, 10, $null, "c:\scripts\mountAzFileShare.ps1", $false)
+
+$tries = 1
+while ($tries -le 10) { 
+    Write-Host "Trying to mount Azure File Share"
+    . c:\scripts\mountAzFileShare.ps1 -storageAccountName "$storageAccountName" -storageAccountKey "$storageAccountKey" -driveLetter "S"
+    if (Test-Path "S:") {
+        $tries = 11
+    }
+    Write-Host "Try $tries failed"
+    $tries = $tries + 1
+    Start-Sleep -Seconds 30
 }
+
+# Setup profile
+Write-Debug "Download profile file"
+[DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/scripts/profile.ps1", 5, 10, $null, $PROFILE.AllUsersAllHosts, $false)
+
+# Choco and SSH
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+choco feature enable -n allowGlobalConfirmation
+choco install --no-progress --limit-output vim
+choco install --no-progress --limit-output openssh -params '"/SSHServerFeature"'
+[DownloadWithRetry]::DoDownloadWithRetry("https://raw.githubusercontent.com/cosmoconsult/azure-swarm/$branch/configs/sshd_config_wpwd", 5, 10, $null, 'C:\ProgramData\ssh\sshd_config', $false)
+New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force
+Restart-Service sshd
+
+# Swarm setup
+New-NetFirewallRule -DisplayName "Allow Swarm TCP" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 2377, 7946 | Out-Null
+New-NetFirewallRule -DisplayName "Allow Swarm UDP" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 4789, 7946 | Out-Null
+
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Unrestricted -Command `"& 'c:\scripts\workerConfig.ps1' -name $name -images '$images' -additionalPostScript '$additionalPostScript' -branch '$branch' -storageAccountName '$storageAccountName' -storageAccountKey '$storageAccountKey' -authToken '$authToken' -restart`" 2>&1 >> c:\scripts\log.txt"
+$trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:30
+$principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName "WorkerConfigReboot" -Description "This task should configure the worker after a reboot"
 
 
 # Maybe pull images
 Write-Host "pull $images"
-Invoke-Expression "docker pull portainer/agent:windows1809-amd64" | Out-Null
 if (-not [string]::IsNullOrEmpty($images)) {
     $imgArray = $images.Split(',');
     foreach ($img in $imgArray) {
@@ -142,55 +147,48 @@ while ($tries -le 10) {
     } 
 }
 
-if (-not $restart) {
-    $tries = 1
-    while ($tries -le 10) { 
-        try {
-            Write-Host "download SSH key"
-            $secretJson = [DownloadWithRetry]::DoDownloadWithRetry("https://$name-vault.vault.azure.net/secrets/sshPubKey?api-version=2016-10-01", 5, 10, "Bearer $KeyVaultToken", $null, $false) | ConvertFrom-Json
-            Write-Debug "got $secretJson"
-            
-            $secretJson.value | Out-File 'c:\ProgramData\ssh\administrators_authorized_keys' -Encoding utf8
 
-            ### adapted (pretty much copied) from https://gitlab.com/DarwinJS/ChocoPackages/-/blob/master/openssh/tools/chocolateyinstall.ps1#L433
-            $path = "c:\ProgramData\ssh\administrators_authorized_keys"
-            $acl = Get-Acl -Path $path
-            # following SDDL implies 
-            # - owner - built in Administrators
-            # - disabled inheritance
-            # - Full access to System
-            # - Full access to built in Administrators
-            $acl.SetSecurityDescriptorSddlForm("O:BAD:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)")
-            Set-Acl -Path $path -AclObject $acl
-            ### end of copy
+$tries = 1
+while ($tries -le 10) { 
+    try {
+        Write-Host "download SSH key"
+        $secretJson = [DownloadWithRetry]::DoDownloadWithRetry("https://$name-vault.vault.azure.net/secrets/sshPubKey?api-version=2016-10-01", 5, 10, "Bearer $KeyVaultToken", $null, $false) | ConvertFrom-Json
+        Write-Debug "got $secretJson"
         
-            $tries = 11
-        }
-        catch {
-            Write-Host "Vault maybe not there yet, could still be deploying (try $tries)"
-            Write-Host $_.Exception
-            $tries = $tries + 1
-            Start-Sleep -Seconds 30
-        }
-    }
+        $secretJson.value | Out-File 'c:\ProgramData\ssh\administrators_authorized_keys' -Encoding utf8
 
-    # Handle additional script
-    if ($additionalPostScript -ne "") {
-        $headers = @{ }
-        if (-not ([string]::IsNullOrEmpty($authToken))) {
-            $headers = @{
-                'Authorization' = $authToken
-            }
-        }
-        [DownloadWithRetry]::DoDownloadWithRetry($additionalPostScript, 5, 10, $authToken, 'c:\scripts\additionalPostScript.ps1', $false)
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -authToken "$authToken"
+        ### adapted (pretty much copied) from https://gitlab.com/DarwinJS/ChocoPackages/-/blob/master/openssh/tools/chocolateyinstall.ps1#L433
+        $path = "c:\ProgramData\ssh\administrators_authorized_keys"
+        $acl = Get-Acl -Path $path
+        # following SDDL implies 
+        # - owner - built in Administrators
+        # - disabled inheritance
+        # - Full access to System
+        # - Full access to built in Administrators
+        $acl.SetSecurityDescriptorSddlForm("O:BAD:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)")
+        Set-Acl -Path $path -AclObject $acl
+        ### end of copy
+    
+        $tries = 11
+    }
+    catch {
+        Write-Host "Vault maybe not there yet, could still be deploying (try $tries)"
+        Write-Host $_.Exception
+        $tries = $tries + 1
+        Start-Sleep -Seconds 30
     }
 }
-else {
-    # Handle additional script
-    if ($additionalPostScript -ne "") {
-        & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -authToken "$authToken" -restart 
+
+# Handle additional script
+if ($additionalPostScript -ne "") {
+    $headers = @{ }
+    if (-not ([string]::IsNullOrEmpty($authToken))) {
+        $headers = @{
+            'Authorization' = $authToken
+        }
     }
+    [DownloadWithRetry]::DoDownloadWithRetry($additionalPostScript, 5, 10, $authToken, 'c:\scripts\additionalPostScript.ps1', $false)
+    & 'c:\scripts\additionalPostScript.ps1' -branch "$branch" -authToken "$authToken"
 }
 
 class DownloadWithRetry {
