@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - v*
+  workflow_dispatch:
 
 jobs:
   upload:
@@ -16,7 +17,12 @@ jobs:
         id: majorver
         run: |
           tag=$(basename $GITHUB_REF)
-          echo "::set-output name=major::${tag%.*.*}"
+          if [[ $GITHUB_REF == *"/tags/"* ]]; then
+            echo "::set-output name=major::${tag%.*.*}"
+          else
+            # Use branch name as major if not triggered for a tag
+            echo "::set-output name=major::$tag"
+          fi 
           
       - name: Archive Release
         uses: thedoctor0/zip-release@master
