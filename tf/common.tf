@@ -172,3 +172,23 @@ resource "azurerm_key_vault_secret" "appinsights-key" {
   value        = var.dockerAutomationAppInsightsKey
   key_vault_id = azurerm_key_vault.main.id
 }
+
+resource "azurerm_key_vault_secret" "rabbitmq-vhost2" {
+  count        = var.rabbitMqVhost == null ? 0 : 1
+  name         = "rabbitMq--virtualHost"
+  value        = var.rabbitMqVhost
+  key_vault_id = azurerm_key_vault.main.id
+}
+
+resource "azurerm_key_vault_secret" "rabbitmq-user2" {
+  count        = var.rabbitMqUser == null ? 0 : 1
+  name         = "rabbitMq--username"
+  value        = var.rabbitMqUser
+  key_vault_id = azurerm_key_vault.main.id
+}
+
+resource "azurerm_key_vault_secret" "rabbitmq-password2" {
+  count        = var.rabbitMqPassword == null ? 0 : 1
+  name         = "rabbitMq--password"
+  value        = var.rabbitMqPassword
+  key_vault_id = azurerm_key_vault.main.id
