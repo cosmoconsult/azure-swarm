@@ -192,3 +192,4 @@ resource "azurerm_key_vault_secret" "rabbitmq-password2" {
   name         = "rabbitMq--password"
   value        = var.rabbitMqPassword
   key_vault_id = azurerm_key_vault.main.id
+}
