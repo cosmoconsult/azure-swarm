@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   traefik:
-    image: tobiasfenster/french-reverse-proxy:2.3.4-windowsservercore
+    image: cosmoconsult/traefik:2.5.5-2004
     command:
 #      - --log.level=DEBUG
       - --api.dashboard=true
@@ -11,6 +11,7 @@ services:
       - --providers.docker.exposedbydefault=false
       - --providers.docker.endpoint=npipe:////./pipe/docker_engine
       - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.myresolver.acme.preferredChain=ISRG Root X1
       - --certificatesresolvers.myresolver.acme.tlschallenge=true
       - --certificatesresolvers.myresolver.acme.email=$email
       - --certificatesresolvers.myresolver.acme.storage=c:/le/acme.json
